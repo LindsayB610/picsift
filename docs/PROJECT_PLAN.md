@@ -110,8 +110,13 @@ Since this is a **public repository**, we must ensure:
 
 4. **Token management helper** (`netlify/functions/_dropbox.ts`)
    - Function to refresh access tokens using refresh token
+   - **Token validation**: Before using tokens, verify they belong to authorized user
+     - Call `users/get_current_account` with access token
+     - Compare account ID against `AUTHORIZED_DROPBOX_ACCOUNT_ID`
+     - If mismatch: reject request, log security event, clear invalid tokens
    - Token caching (in-memory, short-lived)
    - Error handling for expired tokens
+   - Store account ID with tokens for validation
 
 5. **Login page component** (`src/components/Login.tsx`)
    - Display README.md content (render markdown)
@@ -161,10 +166,19 @@ Since this is a **public repository**, we must ensure:
    - If match: proceed with storing tokens and completing authentication
    - If no match: reject authentication, return error, do not store tokens
 
-3. **Ongoing Validation** (optional but recommended)
-   - On each API request, validate that the stored refresh token belongs to the authorized user
-   - This prevents token swapping if someone else somehow gets a token
-   - Can be done by checking account ID when refreshing tokens
+3. **Ongoing Token Validation** (required for security)
+   - On each API request, validate that tokens belong to the authorized user
+   - In `_dropbox.ts` helper: Before making any Dropbox API call:
+     - If using cached access token: validate account ID matches authorized user
+     - If refreshing token: after refresh, validate new token's account ID
+     - Use `users/get_current_account` to get account ID from token
+     - Compare against `AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL`
+     - If mismatch: reject request immediately, log security event, clear invalid tokens
+   - This prevents:
+     - Token swapping (someone replacing tokens with their own)
+     - Token confusion (using wrong user's tokens)
+     - Unauthorized access if tokens are compromised
+   - Store account ID alongside tokens for quick validation (cache account ID with token)
 
 4. **Error Handling**
    - Unauthorized users see a clear error message: "Access denied. This app is restricted to authorized users only."
@@ -176,6 +190,9 @@ Since this is a **public repository**, we must ensure:
 - The authorized account ID/email is stored in Netlify env vars (not in code)
 - Access control happens server-side only (never exposed to browser)
 - If someone tries to authenticate with a different Dropbox account, they'll be rejected before any tokens are stored
+- **Token-to-User Binding**: Tokens are validated on every API call to ensure they belong to the authorized user
+- **Token Storage**: Store account ID alongside tokens to enable quick validation
+- **Security Event Logging**: Log all token validation failures for security monitoring
 
 ---
 
@@ -185,9 +202,14 @@ Since this is a **public repository**, we must ensure:
 #### Tasks:
 1. **Shared Dropbox helper** (`netlify/functions/_dropbox.ts`)
    - Generic `dbx()` function for API calls
-   - Automatic token refresh logic
+   - **Token validation before each API call**:
+     - Validate access token belongs to authorized user (see User Management)
+     - Use `users/get_current_account` to verify account ID matches
+     - Reject request if token doesn't belong to authorized user
+   - Automatic token refresh logic (with validation after refresh)
    - Error handling and retries
    - Type-safe API responses
+   - Account ID caching with tokens for efficient validation
 
 2. **List function** (`netlify/functions/list.ts`)
    - Accept path parameter (default: "/Camera Uploads")
@@ -222,8 +244,10 @@ Since this is a **public repository**, we must ensure:
 **Security considerations:**
 - All Dropbox API calls happen server-side
 - Access tokens never exposed to browser
+- **Token-to-user validation**: Every API call validates tokens belong to authorized user
 - Path validation (prevent path traversal attacks)
 - Session ID validation (format check)
+- Account ID validation prevents unauthorized access even if tokens are compromised
 
 **Deliverables:**
 - All Netlify Functions implemented
@@ -390,7 +414,15 @@ Since this is a **public repository**, we must ensure:
    - Ensure all type-only imports use `import type`
    - Ensure no floating promises
 
-2. **Manual testing**
+2. **Security testing**
+   - Test unauthorized user rejection (different Dropbox account)
+   - Test token validation on API calls
+   - Verify tokens are validated before each request
+   - Test token refresh with validation
+   - Verify account ID validation works correctly
+   - Test error handling for invalid tokens
+
+3. **Manual testing**
    - Complete OAuth flow
    - List images
    - Keep/delete actions
@@ -398,19 +430,19 @@ Since this is a **public repository**, we must ensure:
    - Session completion
    - Error scenarios
 
-3. **UI/UX polish**
+4. **UI/UX polish**
    - Smooth transitions
    - Loading states
    - Keyboard shortcuts work reliably
    - Mobile responsiveness (if needed)
    - Accessibility basics
 
-4. **Performance**
+5. **Performance**
    - Image loading optimization
    - Function response times
    - Client-side shuffling performance
 
-5. **Documentation**
+6. **Documentation**
    - README with setup instructions
    - Environment variables documentation
    - Deployment guide
@@ -418,6 +450,7 @@ Since this is a **public repository**, we must ensure:
 **Deliverables:**
 - Type checking passes with zero errors
 - Linting passes with zero errors
+- Security testing completed (token validation, unauthorized access rejection)
 - Fully tested application
 - Polished UI/UX
 - Documentation
@@ -467,6 +500,8 @@ Before deploying, verify:
 - [ ] OAuth state parameter validated
 - [ ] User access control configured (`AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL` set)
 - [ ] Access control check implemented in auth callback
+- [ ] Token validation implemented in `_dropbox.ts` (validates tokens belong to authorized user on every API call)
+- [ ] Account ID stored with tokens for validation
 - [ ] Path validation prevents traversal attacks
 - [ ] Error messages don't leak sensitive info
 - [ ] HTTPS enforced (Netlify default)
