@@ -103,7 +103,9 @@ Since this is a **public repository**, we must ensure:
 3. **Implement OAuth callback** (`netlify/functions/auth_callback.ts`)
    - Validate state parameter
    - Exchange authorization code for tokens
+   - **Access control check**: Verify user is authorized (see User Management below)
    - Store refresh token securely (Netlify env var or encrypted storage)
+   - Store authorized user ID/email for future validation
    - Return success/error to frontend
 
 4. **Token management helper** (`netlify/functions/_dropbox.ts`)
@@ -129,12 +131,51 @@ Since this is a **public repository**, we must ensure:
 - Refresh token: Store in Netlify env var or encrypted Netlify KV/Blob store
 - State parameter: Use crypto-secure random string, validate on callback
 - Access tokens: Never sent to browser, only used server-side
+- **User access control**: Only authorized user can authenticate (see User Management section)
 
 **Deliverables:**
 - Login page with README display
 - Working OAuth flow
 - Secure token storage
 - Auth status checking
+- Single-user access control enforced
+
+---
+
+### User Management & Access Control
+
+**Goal**: Restrict access to only the authorized user (single-user app)
+
+#### Implementation Strategy:
+
+1. **Authorized User Configuration**
+   - Store authorized Dropbox account ID or email in Netlify environment variable
+   - Environment variable: `AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL`
+   - This is set once during initial setup
+
+2. **Access Control Check** (in `auth_callback.ts`)
+   - After successful OAuth token exchange, call Dropbox API to get user account info
+   - Use `users/get_current_account` endpoint with the access token
+   - Extract account ID or email from the response
+   - Compare against `AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL`
+   - If match: proceed with storing tokens and completing authentication
+   - If no match: reject authentication, return error, do not store tokens
+
+3. **Ongoing Validation** (optional but recommended)
+   - On each API request, validate that the stored refresh token belongs to the authorized user
+   - This prevents token swapping if someone else somehow gets a token
+   - Can be done by checking account ID when refreshing tokens
+
+4. **Error Handling**
+   - Unauthorized users see a clear error message: "Access denied. This app is restricted to authorized users only."
+   - Log unauthorized access attempts (for security monitoring)
+   - Do not expose which user attempted access (security best practice)
+
+#### Security Notes:
+- Account ID is preferred over email (more stable, less privacy-sensitive)
+- The authorized account ID/email is stored in Netlify env vars (not in code)
+- Access control happens server-side only (never exposed to browser)
+- If someone tries to authenticate with a different Dropbox account, they'll be rejected before any tokens are stored
 
 ---
 
@@ -424,6 +465,8 @@ Before deploying, verify:
 - [ ] Access tokens never sent to browser
 - [ ] Refresh token stored securely (Netlify env var)
 - [ ] OAuth state parameter validated
+- [ ] User access control configured (`AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL` set)
+- [ ] Access control check implemented in auth callback
 - [ ] Path validation prevents traversal attacks
 - [ ] Error messages don't leak sensitive info
 - [ ] HTTPS enforced (Netlify default)
@@ -439,6 +482,9 @@ Before deploying, verify:
 DROPBOX_APP_KEY=your_app_key_here
 DROPBOX_APP_SECRET=your_app_secret_here
 DROPBOX_REFRESH_TOKEN=your_refresh_token_here  # Set after first OAuth
+AUTHORIZED_DROPBOX_ACCOUNT_ID=dbid:xxxxxxxxxxxxx  # Your Dropbox account ID (preferred)
+# OR
+AUTHORIZED_DROPBOX_EMAIL=your-email@example.com  # Alternative: use email instead
 ```
 
 ### Optional:
