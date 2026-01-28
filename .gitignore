@@ -37,3 +37,9 @@ lerna-debug.log*
 
 # Netlify
 .netlify/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Compiled Netlify functions (JS output from TS)
+netlify/functions/**/*.js

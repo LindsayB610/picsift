@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "*.config.ts",
+    "*.config.js",
+    "netlify/functions/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "build", "coverage"]
+}

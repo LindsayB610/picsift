@@ -45,6 +45,12 @@ PicSift is a personal photo triage web app that helps you quickly decide which p
 
 ---
 
+## Environment Variables
+
+Required environment variables are documented in `.env.example`. Copy it to `.env` for local development and configure the same variables in the Netlify dashboard for production. Never commit `.env` or any secrets.
+
+---
+
 ## Getting Started
 
 1. Click "Login with Dropbox" to authenticate
