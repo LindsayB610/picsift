@@ -290,6 +290,68 @@ This document captures questions that need to be answered before beginning imple
 
 ---
 
+## Folder Selection & Discovery
+
+### 23. Single vs Multiple Folders (MVP)
+**Question**: Should users be able to select multiple folders for one session?
+- **Option A**: Single folder only (simpler, faster to build)
+- **Option B**: Multiple folders (combine into one queue, more complex)
+- **Option C**: Single folder per session, but can change folder for next session
+
+**Current Plan**: Option A (single folder) for MVP - needs confirmation
+
+**Recommendation**: Option A for MVP - one folder at a time, can change for next session
+
+---
+
+### 24. Folder Discovery Depth & Limits
+**Question**: How deep should we scan and how many folders?
+- **Option A**: 2-3 levels deep, max 50 folders (fast)
+- **Option B**: 3-4 levels deep, max 100 folders (balanced)
+- **Option C**: 4-5 levels deep, no limit (comprehensive but slow)
+
+**Current Plan**: 3-4 levels, max 100 folders - needs confirmation
+
+**Recommendation**: Option B - 3-4 levels, max 100 folders (good balance)
+
+---
+
+### 25. Folder Discovery Caching
+**Question**: Should we cache folder discovery results?
+- **Option A**: No caching (always fresh, but slower)
+- **Option B**: Cache for 1 hour (good balance)
+- **Option C**: Cache until manual refresh (faster, but may be stale)
+
+**Current Plan**: 1 hour TTL - needs confirmation
+
+**Recommendation**: Option B - 1 hour cache with manual refresh button
+
+---
+
+### 26. Folder Selection Persistence
+**Question**: How should we store the selected folder?
+- **Option A**: localStorage only (simple, single device)
+- **Option B**: Server-side (KV/database) for multi-device sync
+- **Option C**: Both (localStorage + optional server sync)
+
+**Current Plan**: localStorage for MVP - needs confirmation
+
+**Recommendation**: Option A for MVP (single-user, single-device use case)
+
+---
+
+### 27. Can User Change Folder Mid-Session?
+**Question**: Should users be able to switch folders during an active session?
+- **Option A**: No, must complete or abandon current session (simpler)
+- **Option B**: Yes, can switch anytime (more flexible, more complex)
+- **Option C**: Yes, but only at session boundaries (compromise)
+
+**Current Plan**: Option A (no mid-session change) - needs confirmation
+
+**Recommendation**: Option A - must complete or abandon session, select new folder for next session
+
+---
+
 ## Summary of Critical Decisions Needed
 
 **Before Phase 1:**
@@ -299,6 +361,13 @@ This document captures questions that need to be answered before beginning imple
 1. ✅ Refresh token storage mechanism (env var vs KV)
 2. ✅ OAuth state storage (cookie vs session)
 3. ✅ OAuth callback error handling (redirect vs JSON)
+
+**Before Phase 2.5 (Folder Discovery):**
+23. ✅ Single vs multiple folders (MVP decision)
+24. ✅ Folder discovery depth and limits
+25. ✅ Folder discovery caching strategy
+26. ✅ Folder selection persistence method
+27. ✅ Can user change folder mid-session?
 
 **Before Phase 3 (API Functions):**
 4. ✅ Token caching strategy (TTL, invalidation)
