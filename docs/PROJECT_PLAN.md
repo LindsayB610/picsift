@@ -129,7 +129,26 @@ Since this is a **public repository**, we must ensure:
    - Show Login page if not authenticated
    - Handle OAuth callback
    - Store auth state (sessionStorage/localStorage)
-   - Route to main app after authentication
+   - After successful auth: route to folder selection (if no saved preference) or main app
+
+7. **Folder discovery function** (`netlify/functions/discover_folders.ts`)
+   - Scan Dropbox for folders containing images
+   - Recursive scan from root (max depth: 3-4 levels)
+   - Count images per folder
+   - Return list of folders with image counts
+   - Cache results (1 hour TTL)
+
+8. **Folder selector component** (`src/components/FolderSelector.tsx`)
+   - Display list of folders with images
+   - Show folder name, path, and image count
+   - Single folder selection (MVP - one at a time)
+   - Save folder preference to localStorage
+   - "Start Session" button
+
+9. **Folder preference management**
+   - Store selected folder in localStorage (`picsift:selectedFolder`)
+   - Load preference on app start
+   - Allow user to change folder (start new session with different folder)
 
 **Security considerations:**
 - App Key/Secret: Netlify env vars only (`DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`)
@@ -144,6 +163,63 @@ Since this is a **public repository**, we must ensure:
 - Secure token storage
 - Auth status checking
 - Single-user access control enforced
+- Folder discovery function
+- Folder selector UI
+- Folder preference persistence
+
+---
+
+### Phase 2.5: Folder Discovery & Selection (New User Onboarding)
+
+**Goal**: Allow users to discover and select which Dropbox folder(s) to use for triage
+
+#### Tasks:
+1. **Folder discovery function** (`netlify/functions/discover_folders.ts`)
+   - Recursively scan Dropbox folders (max depth: 3-4 levels)
+   - Identify folders containing image files
+   - Count images per folder
+   - Return sorted list (most images first)
+   - Cache results for performance (1 hour TTL)
+
+2. **Folder selector component** (`src/components/FolderSelector.tsx`)
+   - Display discovered folders with:
+     - Folder name and path (breadcrumb style)
+     - Image count badge
+     - Select button/radio
+   - Single folder selection (MVP - one folder at a time)
+   - Loading state during discovery
+   - Empty state if no folders found
+   - "Start Session" button (enabled when folder selected)
+
+3. **Folder preference storage**
+   - Save selected folder to localStorage
+   - Key: `picsift:selectedFolder`
+   - Value: `{ path: string, name: string, imageCount: number }`
+   - Load on app start
+   - Allow changing folder (for new sessions)
+
+4. **Update App routing**
+   - After authentication: check for saved folder preference
+   - If no preference: show folder selector
+   - If preference exists: offer to use it or select new folder
+   - After folder selection: proceed to session start
+
+5. **Update list function**
+   - Accept folder path from user selection (not hardcoded)
+   - Support array of paths (for future multi-folder support)
+   - Default to saved preference or "/Camera Uploads" if none
+
+**MVP Decision**: Single folder selection (one at a time)
+- User selects one folder per session
+- Can change folder for next session
+- Future: Support multiple folders combined into one queue
+
+**Deliverables:**
+- Folder discovery function
+- Folder selector UI component
+- Folder preference persistence
+- Updated routing flow
+- Integration with session management
 
 ---
 
@@ -212,10 +288,12 @@ Since this is a **public repository**, we must ensure:
    - Account ID caching with tokens for efficient validation
 
 2. **List function** (`netlify/functions/list.ts`)
-   - Accept path parameter (default: "/Camera Uploads")
-   - Call `files/list_folder`
+   - Accept path parameter (from user's folder selection, or default: "/Camera Uploads")
+   - Support array of paths (for future multi-folder support)
+   - Call `files/list_folder` for each path
    - Handle pagination with `files/list_folder/continue`
    - Filter to image files only (jpg, jpeg, png, heic, webp, gif)
+   - Combine results if multiple paths provided
    - Return array of `DbxEntry` objects
 
 3. **Temporary link function** (`netlify/functions/temp_link.ts`)
@@ -555,6 +633,7 @@ picsift/
 │   └── functions/
 │       ├── auth_start.ts           # OAuth initiation
 │       ├── auth_callback.ts        # OAuth callback handler
+│       ├── discover_folders.ts     # Discover folders with images
 │       ├── list.ts                 # List images
 │       ├── temp_link.ts            # Get image URL
 │       ├── trash.ts                # Move to quarantine
@@ -569,6 +648,7 @@ picsift/
     ├── index.css                   # Global styles
     └── components/
         ├── Login.tsx               # Login page with README
+        ├── FolderSelector.tsx      # Folder discovery and selection
         ├── Viewer.tsx              # Image display
         └── Controls.tsx            # Action buttons
 ```
