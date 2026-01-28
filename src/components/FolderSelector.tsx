@@ -32,7 +32,9 @@ export default function FolderSelector({
     setError(null);
 
     try {
+      console.log('[FolderSelector] Starting folder discovery...');
       const response = await discoverFolders(3);
+      console.log('[FolderSelector] Received response:', response);
       setFolders(response.folders);
 
       // Check for saved preference

@@ -31,28 +31,74 @@ export default function App() {
    * Initialize app: check for OAuth callback, load saved auth state, check for folder preference
    */
   const initializeApp = async () => {
-    // Check if we're returning from OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // Check if user wants to clear auth and re-authenticate
+    if (urlParams.get('reauth') === 'true' || urlParams.get('clear') === 'true') {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(FOLDER_PREFERENCE_KEY);
+      setAuthState({ is_authenticated: false });
+      setSelectedFolder(null);
+      window.history.replaceState({}, '', window.location.pathname);
+      setAppState('login');
+      return;
+    }
+
+    // Server redirects here after OAuth with ?auth=success&account_id=xxx or ?auth=error&message=xxx
+    const authResult = urlParams.get('auth');
+    const accountId = urlParams.get('account_id');
+    const errorMessage = urlParams.get('message');
+
+    if (authResult === 'success' && accountId) {
+      // Redirect from auth_callback with success
+      const newAuthState: AuthState = {
+        is_authenticated: true,
+        account_id: accountId,
+      };
+      setAuthState(newAuthState);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newAuthState));
+      window.history.replaceState({}, '', window.location.pathname);
+
+      const savedFolder = localStorage.getItem(FOLDER_PREFERENCE_KEY);
+      if (savedFolder) {
+        try {
+          const folder = JSON.parse(savedFolder) as FolderInfo;
+          setSelectedFolder(folder);
+          setAppState('ready');
+        } catch {
+          setAppState('folder-selection');
+        }
+      } else {
+        setAppState('folder-selection');
+      }
+      return;
+    }
+
+    if (authResult === 'error') {
+      // Redirect from auth_callback with error
+      window.history.replaceState({}, '', window.location.pathname);
+      if (errorMessage) {
+        console.error('Auth error:', errorMessage);
+      }
+      setAppState('login');
+      return;
+    }
+
+    // Legacy: code + state in URL (frontend calls API) — keep for compatibility
     const code = urlParams.get('code');
     const state = urlParams.get('state');
-
     if (code && state) {
-      // Handle OAuth callback
       try {
         const response = await checkAuthCallback();
         if (response.success && response.account_id) {
-          // Save auth state
           const newAuthState: AuthState = {
             is_authenticated: true,
             account_id: response.account_id,
           };
           setAuthState(newAuthState);
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newAuthState));
-
-          // Clear OAuth params from URL
           window.history.replaceState({}, '', window.location.pathname);
 
-          // Check for saved folder preference
           const savedFolder = localStorage.getItem(FOLDER_PREFERENCE_KEY);
           if (savedFolder) {
             try {
@@ -60,24 +106,23 @@ export default function App() {
               setSelectedFolder(folder);
               setAppState('ready');
             } catch {
-              // Invalid saved folder, show selector
               setAppState('folder-selection');
             }
           } else {
-            // No saved folder, show selector
             setAppState('folder-selection');
           }
         } else {
-          // Auth failed
           setAppState('login');
         }
       } catch (error) {
         console.error('Auth callback error:', error);
         setAppState('login');
       }
-    } else {
-      // Not an OAuth callback, check saved auth state
-      const savedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+      return;
+    }
+
+    // Not an OAuth callback, check saved auth state
+    const savedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
       if (savedAuth) {
         try {
           const auth = JSON.parse(savedAuth) as AuthState;
@@ -110,7 +155,6 @@ export default function App() {
         // No saved auth, show login
         setAppState('login');
       }
-    }
   };
 
   /**

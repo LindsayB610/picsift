@@ -61,8 +61,12 @@ export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
 export async function discoverFolders(
   maxDepth: number = 3,
 ): Promise<DiscoverFoldersResponse> {
+  console.log(`[API] Calling discover_folders with max_depth=${maxDepth}`);
   const response = await fetch(
     `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`,
   );
-  return handleResponse<DiscoverFoldersResponse>(response);
+  console.log(`[API] Response status: ${response.status}`);
+  const data = await handleResponse<DiscoverFoldersResponse>(response);
+  console.log(`[API] Response data:`, data);
+  return data;
 }

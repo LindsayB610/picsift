@@ -90,11 +90,42 @@ async function discoverFoldersRecursive(
 
   try {
     while (hasMore) {
-      const result = cursor
-        ? await dbx.filesListFolderContinue({ cursor })
-        : await dbx.filesListFolder({ path, recursive: false });
+      let result;
+      try {
+        result = cursor
+          ? await dbx.filesListFolderContinue({ cursor })
+          : await dbx.filesListFolder({
+              path: path || '', // Ensure empty string for root
+              recursive: false,
+            });
+      } catch (listError) {
+        const errorMsg =
+          listError instanceof Error ? listError.message : String(listError);
+        console.error(
+          `[DISCOVER] Error listing folder "${path}": ${errorMsg}`,
+        );
+        
+        // Extract DropboxResponseError details
+        if (listError && typeof listError === 'object') {
+          const err = listError as Record<string, unknown>;
+          if ('error' in err) {
+            console.error('[DISCOVER] Dropbox error:', err.error);
+          }
+          if ('status' in err) {
+            console.error('[DISCOVER] HTTP status:', err.status);
+          }
+          if ('headers' in err) {
+            console.error('[DISCOVER] Response headers:', err.headers);
+          }
+        }
+        throw listError;
+      }
 
       const entries = result.result.entries;
+      
+      if (currentDepth === 0 && !cursor) {
+        console.log(`[DISCOVER] Root level: found ${entries.length} entries`);
+      }
 
       for (const entry of entries) {
         if (entry['.tag'] === 'folder') {
@@ -110,6 +141,10 @@ async function discoverFoldersRecursive(
 
           // Count images in this folder
           const imageCount = await countImagesInFolder(pathLower, dbx);
+          
+          if (currentDepth <= 1) {
+            console.log(`[DISCOVER] Folder "${name}" (${pathLower}): ${imageCount} images`);
+          }
 
           if (imageCount > 0) {
             // Create breadcrumb-style display path
@@ -141,7 +176,15 @@ async function discoverFoldersRecursive(
     }
   } catch (error) {
     // Some folders may not be accessible, skip them
-    console.warn(`Error scanning folder ${path}:`, error);
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+    console.error(
+      `[DISCOVER] Error scanning folder "${path}": ${errorMessage}`,
+    );
+    // Re-throw if it's the root folder (we need to know about root errors)
+    if (path === '' || path === '/') {
+      throw error;
+    }
   }
 
   return folders;
@@ -164,12 +207,84 @@ export const handler = async (
       10,
     );
 
-    // Start from root
-    const rootPath = '';
-
-    // Create Dropbox client and discover folders
+    // Create Dropbox client
     const dbx = await createDropboxClient();
-    const folders = await discoverFoldersRecursive(rootPath, dbx, maxDepth);
+    
+    // Try starting from root (empty string) - Dropbox API v2 uses '' for root
+    // If that fails, we'll try common folder paths
+    let rootPath = '';
+    let folders: FolderInfo[] = [];
+    
+    try {
+      console.log(`[DISCOVER] Starting folder discovery from root, max depth: ${maxDepth}`);
+      
+      // Test: Try listing root first
+      console.log('[DISCOVER] Testing root folder access with empty string...');
+      const rootTest = await dbx.filesListFolder({ path: '' });
+      console.log(
+        `[DISCOVER] Root folder test: found ${rootTest.result.entries.length} entries`,
+      );
+      
+      // If root works, discover from root
+      folders = await discoverFoldersRecursive(rootPath, dbx, maxDepth);
+    } catch (rootError) {
+      console.error('[DISCOVER] Root folder access failed, trying alternative paths...');
+      
+      // Try common folder paths as fallback
+      const commonPaths = ['/', 'Camera Uploads', 'Photos'];
+      let foundPath = false;
+      
+      for (const testPath of commonPaths) {
+        try {
+          console.log(`[DISCOVER] Trying path: "${testPath}"`);
+          const testResult = await dbx.filesListFolder({ path: testPath });
+          console.log(
+            `[DISCOVER] Path "${testPath}" works: found ${testResult.result.entries.length} entries`,
+          );
+          rootPath = testPath;
+          folders = await discoverFoldersRecursive(rootPath, dbx, maxDepth);
+          foundPath = true;
+          break;
+        } catch (pathError) {
+          const pathErrorMsg =
+            pathError instanceof Error ? pathError.message : String(pathError);
+          console.warn(`[DISCOVER] Path "${testPath}" failed: ${pathErrorMsg}`);
+          // Continue to next path
+        }
+      }
+      
+      if (!foundPath) {
+        // If all paths failed, throw the original root error with details
+        const errorDetails =
+          rootError instanceof Error ? rootError.message : String(rootError);
+        console.error(`[DISCOVER] All paths failed. Original error: ${errorDetails}`);
+        
+        // Try to extract Dropbox error details
+        if (rootError && typeof rootError === 'object') {
+          const errorObj = rootError as Record<string, unknown>;
+          console.error('[DISCOVER] Full error object keys:', Object.keys(errorObj));
+          if ('error' in errorObj) {
+            console.error('[DISCOVER] Dropbox error:', errorObj.error);
+          }
+          if ('status' in errorObj) {
+            console.error('[DISCOVER] HTTP status:', errorObj.status);
+          }
+          if ('headers' in errorObj) {
+            console.error('[DISCOVER] Response headers:', errorObj.headers);
+          }
+          // Log the full error as JSON for debugging
+          try {
+            console.error('[DISCOVER] Full error JSON:', JSON.stringify(errorObj, null, 2));
+          } catch {
+            // Ignore JSON stringify errors
+          }
+        }
+        
+        throw rootError;
+      }
+    }
+
+    console.log(`[DISCOVER] Found ${folders.length} folders with images`);
 
     // Sort by image count (descending)
     folders.sort((a, b) => b.image_count - a.image_count);
@@ -183,13 +298,53 @@ export const handler = async (
       }),
     };
   } catch (error) {
-    console.error('Folder discovery error:', error);
+    console.error('[DISCOVER] Folder discovery error:', error);
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+    const errorStack =
+      error instanceof Error ? error.stack : undefined;
+    
+    // Extract Dropbox error details if available
+    let dropboxError: string | undefined;
+    let httpStatus: number | undefined;
+    if (error && typeof error === 'object') {
+      const err = error as Record<string, unknown>;
+      httpStatus = typeof err.status === 'number' ? err.status : undefined;
+      
+      // Properly serialize the error field
+      if ('error' in err) {
+        if (typeof err.error === 'string') {
+          dropboxError = err.error;
+        } else if (err.error && typeof err.error === 'object') {
+          // If it's an object, try to extract a message or stringify it
+          const errorObj = err.error as Record<string, unknown>;
+          if ('error_summary' in errorObj && typeof errorObj.error_summary === 'string') {
+            dropboxError = errorObj.error_summary;
+          } else if ('error' in errorObj && typeof errorObj.error === 'string') {
+            dropboxError = errorObj.error;
+          } else {
+            dropboxError = JSON.stringify(err.error);
+          }
+        }
+      }
+    }
+    
+    console.error('[DISCOVER] Error details:', {
+      message: errorMessage,
+      stack: errorStack,
+      dropboxError,
+      httpStatus,
+    });
+    
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         error: 'Failed to discover folders',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: errorMessage,
+        dropboxError,
+        httpStatus,
+        ...(errorStack && { stack: errorStack }),
       }),
     };
   }

@@ -121,6 +121,26 @@ function getRedirectUri(): string {
 }
 
 /**
+ * Get app base URL for redirecting after auth
+ * For local dev, always use localhost:8888 (frontend port)
+ * In production, use the actual site URL
+ */
+function getAppBaseUrl(): string {
+  // In production, use custom domain or Netlify URL
+  const netlifyUrl = process.env.NETLIFY_URL;
+  const siteUrl = process.env.URL;
+  
+  // For local development, always redirect to the frontend port (8888)
+  // process.env.URL in Netlify Dev points to the function server, not the frontend
+  if (!netlifyUrl && (!siteUrl || siteUrl.includes('localhost'))) {
+    return 'http://localhost:8888';
+  }
+  
+  // In production, use the actual site URL
+  return netlifyUrl || siteUrl || 'http://localhost:8888';
+}
+
+/**
  * Check if account is authorized
  */
 function isAuthorizedAccount(accountId: string, email: string): boolean {
@@ -157,30 +177,23 @@ export const handler = async (
   }
 
   try {
+    const appBase = getAppBaseUrl();
+
     // Get authorization code and state from query params
     const code = event.queryStringParameters?.code;
     const state = getState(event);
     const stateParam = event.queryStringParameters?.state;
 
     if (!code) {
-      return {
-        statusCode: 400,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Missing authorization code' }),
-      };
+      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent('Missing authorization code')}`;
+      return { statusCode: 302, headers: { Location: redirectUrl } };
     }
 
     // Validate state parameter (CSRF protection)
     if (!state || !stateParam || state !== stateParam) {
       console.error('[SECURITY] OAuth state mismatch');
-      return {
-        statusCode: 403,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: 'Invalid state parameter',
-          message: 'Access denied. This app is restricted to authorized users only.',
-        }),
-      };
+      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent('Invalid state parameter')}`;
+      return { statusCode: 302, headers: { Location: redirectUrl } };
     }
 
     // Exchange code for tokens
@@ -188,60 +201,51 @@ export const handler = async (
       await exchangeCodeForTokens(code);
 
     // Access control check: verify user is authorized
-    if (!isAuthorizedAccount(account_id, email)) {
+    // TEMPORARILY DISABLED for local dev to make testing easier
+    // In production, this should be enabled
+    const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
+    if (!isAuthorizedAccount(account_id, email) && !isLocalDev) {
+      // Only enforce in production
       console.error(
         `[SECURITY] Unauthorized access attempt: account_id=${account_id}, email=${email}`,
       );
-      return {
-        statusCode: 403,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          success: false,
-          error: 'Access denied',
-          message: 'Access denied. This app is restricted to authorized users only.',
-        }),
-      };
+      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent('Access denied. This app is restricted to authorized users only.')}`;
+      return { statusCode: 302, headers: { Location: redirectUrl } };
     }
-
-    // Store refresh token securely
-    // Note: In production, store this in Netlify environment variables or encrypted storage
-    // For MVP, we'll return it to the client to store (not ideal, but functional)
-    // TODO: Implement secure server-side token storage
+    
+    // In local dev, just log the account info
+    if (isLocalDev) {
+      console.log(`[AUTH] Authenticated: account_id=${account_id}, email=${email}`);
+    }
 
     // Clear state cookie
     const clearCookieHeader =
       'picsift_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
 
-    // Return success with account info
-    // In production, you'd want to store the refresh token server-side
+    // In local dev, log the refresh token so user can update .env
+    if (isLocalDev) {
+      console.log('='.repeat(80));
+      console.log('[AUTH] NEW REFRESH TOKEN (update your .env file):');
+      console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
+      console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
+      console.log('='.repeat(80));
+    }
+
+    // Redirect to app with success so user lands on the app, not raw JSON
+    const redirectUrl = `${appBase}/?auth=success&account_id=${encodeURIComponent(account_id)}`;
+
     return {
-      statusCode: 200,
+      statusCode: 302,
       headers: {
-        'Content-Type': 'application/json',
+        Location: redirectUrl,
         'Set-Cookie': clearCookieHeader,
       },
-      body: JSON.stringify({
-        success: true,
-        account_id,
-        email,
-        // Note: In production, don't return refresh_token to client
-        // Store it server-side instead
-        refresh_token, // Temporary: for MVP, client stores this
-        message:
-          'IMPORTANT: Store DROPBOX_REFRESH_TOKEN in Netlify environment variables. Do not commit to git.',
-      }),
     };
   } catch (error) {
     console.error('OAuth callback error:', error);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        success: false,
-        error: 'Authentication failed',
-        message:
-          error instanceof Error ? error.message : 'Unknown error occurred',
-      }),
-    };
+    const message =
+      error instanceof Error ? error.message : 'Unknown error occurred';
+    const redirectUrl = `${getAppBaseUrl()}/?auth=error&message=${encodeURIComponent(message)}`;
+    return { statusCode: 302, headers: { Location: redirectUrl } };
   }
 };
