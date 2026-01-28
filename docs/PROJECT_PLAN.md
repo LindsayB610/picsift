@@ -383,38 +383,54 @@ Since this is a **public repository**, we must ensure:
    - Responsive design
 
 3. **Viewer component** (`src/components/Viewer.tsx`)
-   - Display single image (full-screen or large view)
+   - Display single image (large centered view with controls visible)
+   - Preload next image for smooth transitions
    - Loading states
    - Error handling (failed image load)
-   - Image optimization (lazy loading, sizing)
+   - Image optimization (sizing, responsive)
 
-3. **Controls component** (`src/components/Controls.tsx`)
-   - Keep button
-   - Delete button
-   - Undo button (if available)
-   - Progress indicator (current / total)
-   - Keyboard shortcuts (K, D, U)
+4. **Controls component** (`src/components/Controls.tsx`)
+   - Keep button (with "K" shortcut indicator)
+   - Delete button (with "D" shortcut indicator)
+   - Undo button (with "U" shortcut indicator, if available)
+   - Progress indicator ("37 of 500" format)
+   - Keyboard shortcuts always visible (K, D, U)
+   - Confetti celebration (configurable frequency via settings)
 
-4. **Session state management**
-   - Generate sessionId (UUID or ISO timestamp)
+5. **Settings component** (`src/components/Settings.tsx`)
+   - Confetti frequency setting:
+     - Every delete
+     - Every 5 deletes (default)
+     - Every 10 deletes
+     - Every 25 deletes
+     - Off
+   - Store preference in localStorage (`picsift:confettiFrequency`)
+   - Accessible from main app (gear icon or menu)
+   - Immediate effect (no restart needed)
+
+6. **Session state management**
+   - Generate sessionId (UUID v4 format)
    - Shuffle queue client-side
    - Track current index
    - Track kept/trashed items
    - Maintain undo stack
+   - Partial persistence: sessionId and index saved to localStorage
 
-5. **Styling**
+7. **Styling**
    - Minimal, clean design
    - Responsive layout
-   - Keyboard shortcut indicators
-   - Progress feedback
-   - Optional: confetti/celebration for delete streaks
+   - Keyboard shortcut indicators (always visible)
+   - Progress feedback ("X of Y" format)
+   - Confetti celebration (configurable via settings)
 
 **Deliverables:**
 - Login page with README display
-- Working UI with image viewer
+- Working UI with image viewer (large centered view)
 - Functional keep/delete/undo actions
-- Keyboard shortcuts
-- Progress tracking
+- Keyboard shortcuts (always visible)
+- Progress tracking ("X of Y" format)
+- Settings component with confetti frequency control
+- Image preloading for smooth transitions
 
 ---
 
@@ -453,11 +469,12 @@ Since this is a **public repository**, we must ensure:
 1. **Error handling** (per TypeScript Standards)
    - All catch blocks use `unknown` type
    - Proper error normalization utilities
-   - Network errors
-   - Dropbox API errors
-   - Authentication errors
-   - File not found errors
-   - Rate limiting
+   - **Error display**: Toast notifications for transient errors, modal dialogs for critical errors
+   - Network errors (toast)
+   - Dropbox API errors (toast)
+   - Authentication errors (modal)
+   - File not found errors (toast)
+   - Rate limiting (toast with retry)
    - Consistent error handling patterns
 
 2. **Edge cases**
@@ -469,9 +486,9 @@ Since this is a **public repository**, we must ensure:
 
 3. **User feedback**
    - Loading indicators
-   - Error messages
+   - Error messages (toast for transient, modal for critical)
    - Success confirmations
-   - Retry mechanisms
+   - Retry mechanisms (auto-retry once, then manual retry button)
 
 **Deliverables:**
 - Comprehensive error handling
@@ -501,7 +518,13 @@ Since this is a **public repository**, we must ensure:
    - Verify account ID validation works correctly
    - Test error handling for invalid tokens
 
-3. **Manual testing**
+3. **Test data setup**
+   - Use real Dropbox account with dedicated test folder (e.g., `/PicSift Test`)
+   - Add test images to test folder
+   - Keep production `/Camera Uploads` separate
+   - Test with various image types/sizes
+
+4. **Manual testing**
    - Complete OAuth flow
    - List images
    - Keep/delete actions
@@ -651,7 +674,8 @@ picsift/
         ├── Login.tsx               # Login page with README
         ├── FolderSelector.tsx      # Folder discovery and selection
         ├── Viewer.tsx              # Image display
-        └── Controls.tsx            # Action buttons
+        ├── Controls.tsx            # Action buttons
+        └── Settings.tsx            # Settings (confetti frequency)
 ```
 
 ---
