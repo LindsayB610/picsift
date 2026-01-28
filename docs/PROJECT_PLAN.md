@@ -455,10 +455,11 @@ NETLIFY_URL=https://picsift.lindsaybrunner.com  # For OAuth redirect
 picsift/
 ├── .env.example                    # Template with placeholders
 ├── .gitignore                      # Includes .env
-├── BUILD_NOTES.md                  # Original spec
-├── PROJECT_PLAN.md                 # This file
 ├── README.md                       # Setup instructions
-├── TYPESCRIPT_STANDARDS.md         # TypeScript standards alignment plan
+├── docs/                           # Reference documentation
+│   ├── BUILD_NOTES.md              # Original spec
+│   ├── PROJECT_PLAN.md             # This file
+│   └── TYPESCRIPT_STANDARDS.md     # TypeScript standards alignment plan
 ├── netlify.toml                    # Netlify configuration
 ├── package.json
 ├── tsconfig.json                   # Root with project references
@@ -517,14 +518,14 @@ picsift/
 
 ## TypeScript Standards Integration
 
-This project follows the TypeScript Standards outlined in `TYPESCRIPT_STANDARDS.md`. Key requirements:
+This project follows the TypeScript Standards outlined in `docs/TYPESCRIPT_STANDARDS.md`. Key requirements:
 
 - **TSConfig Structure**: Proper base config with all required compiler options
 - **ESLint**: Type-checked linting with `projectService: true`
 - **Code Patterns**: No `any`, proper error handling, type-safe patterns
 - **Validation**: `npm run typecheck` and `npm run lint` must pass with zero errors
 
-The TypeScript standards are integrated into Phase 1 (setup), Phase 4 (types), Phase 7 (error handling), and Phase 8 (testing). See `TYPESCRIPT_STANDARDS.md` for detailed implementation guidance.
+The TypeScript standards are integrated into Phase 1 (setup), Phase 4 (types), Phase 7 (error handling), and Phase 8 (testing). See `docs/TYPESCRIPT_STANDARDS.md` for detailed implementation guidance.
 
 ---
 
