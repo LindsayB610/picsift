@@ -423,10 +423,11 @@ Since this is a **public repository**, we must ensure:
 
 #### Tasks:
 1. **Session initialization**
-   - Fetch image list from Dropbox
-   - Shuffle client-side
+   - Check for saved folder preference or use selected folder
+   - Fetch image list from Dropbox (from selected folder path)
+   - Shuffle queue client-side
    - Generate sessionId
-   - Initialize session state
+   - Initialize session state with folder path(s)
 
 2. **State persistence** (optional)
    - Save session state to localStorage
