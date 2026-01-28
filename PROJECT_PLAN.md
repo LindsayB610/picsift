@@ -26,7 +26,7 @@ Since this is a **public repository**, we must ensure:
    - `npm create vite@latest . -- --template react-ts`
    - Install dependencies
    - Install markdown rendering library (e.g., `react-markdown`)
-   - Configure TypeScript
+   - Configure TypeScript with proper TSConfig structure (see TypeScript Standards)
 
 2. **Set up Netlify configuration**
    - Create `netlify.toml` with function settings
@@ -44,15 +44,44 @@ Since this is a **public repository**, we must ensure:
    - Ensure `.env` is in `.gitignore`
    - Document required environment variables
 
-5. **Development tooling**
-   - Set up ESLint/Prettier (optional but recommended)
+5. **TypeScript configuration** (per TypeScript Standards)
+   - Create `tsconfig.base.json` with all required compiler options:
+     - `noUncheckedIndexedAccess`
+     - `exactOptionalPropertyTypes`
+     - `useUnknownInCatchVariables`
+     - `verbatimModuleSyntax`
+     - `moduleDetection: "force"`
+     - `noUncheckedSideEffectImports`
+   - Create `tsconfig.app.json` extending base
+   - Create `tsconfig.node.json` extending base
+   - Create `tsconfig.functions.json` extending base (for Netlify Functions)
+   - Create `tsconfig.eslint.json` for ESLint type-checking
+   - Update root `tsconfig.json` with project references
+
+6. **ESLint configuration** (per TypeScript Standards)
+   - Install `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser`
+   - Configure with `projectService: true` (better performance)
+   - Add `recommendedTypeChecked` config
+   - Enable critical type-checked rules:
+     - `@typescript-eslint/no-floating-promises`
+     - `@typescript-eslint/no-misused-promises`
+     - `@typescript-eslint/switch-exhaustiveness-check`
+     - `@typescript-eslint/consistent-type-imports`
+   - Configure ESLint to use `tsconfig.eslint.json`
+
+7. **Development tooling**
+   - Set up Prettier (optional but recommended)
    - Configure VS Code settings (optional)
+   - Add npm scripts: `typecheck`, `lint`, `lint:fix`
 
 **Deliverables:**
 - Working Vite dev server
 - Netlify Functions structure
 - Environment variable template
 - Basic routing setup
+- Complete TSConfig structure (base, app, node, functions, eslint)
+- ESLint configured with type-checked rules
+- Type checking and linting scripts working
 
 ---
 
@@ -173,14 +202,20 @@ Since this is a **public repository**, we must ensure:
    - API request/response types
    - Error types
 
-2. **Type safety throughout**
+2. **Type safety throughout** (per TypeScript Standards)
    - Ensure all functions are typed
    - No `any` types (use `unknown` if needed)
    - Proper error types
+   - All catch blocks use `unknown` and proper error normalization
+   - All index access handles `undefined` (with `noUncheckedIndexedAccess`)
+   - All type-only imports use `import type` (with `verbatimModuleSyntax`)
+   - All promises are handled (no floating promises)
 
 **Deliverables:**
 - Complete type definitions
 - Type-safe codebase
+- All code patterns align with TypeScript Standards
+- No type-checking errors
 
 ---
 
@@ -271,12 +306,15 @@ Since this is a **public repository**, we must ensure:
 **Goal**: Robust error handling and user feedback
 
 #### Tasks:
-1. **Error handling**
+1. **Error handling** (per TypeScript Standards)
+   - All catch blocks use `unknown` type
+   - Proper error normalization utilities
    - Network errors
    - Dropbox API errors
    - Authentication errors
    - File not found errors
    - Rate limiting
+   - Consistent error handling patterns
 
 2. **Edge cases**
    - Empty folder
@@ -302,7 +340,16 @@ Since this is a **public repository**, we must ensure:
 **Goal**: Test the complete flow and polish the experience
 
 #### Tasks:
-1. **Manual testing**
+1. **Type checking and linting** (per TypeScript Standards)
+   - Run `npm run typecheck` - must pass with zero errors
+   - Run `npm run lint` - must pass with zero errors
+   - Fix any violations incrementally
+   - Ensure all catch blocks use `unknown`
+   - Ensure all index access handles `undefined`
+   - Ensure all type-only imports use `import type`
+   - Ensure no floating promises
+
+2. **Manual testing**
    - Complete OAuth flow
    - List images
    - Keep/delete actions
@@ -310,27 +357,30 @@ Since this is a **public repository**, we must ensure:
    - Session completion
    - Error scenarios
 
-2. **UI/UX polish**
+3. **UI/UX polish**
    - Smooth transitions
    - Loading states
    - Keyboard shortcuts work reliably
    - Mobile responsiveness (if needed)
    - Accessibility basics
 
-3. **Performance**
+4. **Performance**
    - Image loading optimization
    - Function response times
    - Client-side shuffling performance
 
-4. **Documentation**
+5. **Documentation**
    - README with setup instructions
    - Environment variables documentation
    - Deployment guide
 
 **Deliverables:**
+- Type checking passes with zero errors
+- Linting passes with zero errors
 - Fully tested application
 - Polished UI/UX
 - Documentation
+- Code aligns with TypeScript Standards
 
 ---
 
@@ -408,10 +458,17 @@ picsift/
 ├── BUILD_NOTES.md                  # Original spec
 ├── PROJECT_PLAN.md                 # This file
 ├── README.md                       # Setup instructions
+├── TYPESCRIPT_STANDARDS.md         # TypeScript standards alignment plan
 ├── netlify.toml                    # Netlify configuration
 ├── package.json
-├── tsconfig.json
+├── tsconfig.json                   # Root with project references
+├── tsconfig.base.json              # Shared base configuration
+├── tsconfig.app.json               # App code configuration
+├── tsconfig.node.json              # Node tooling configuration
+├── tsconfig.functions.json         # Netlify functions configuration
+├── tsconfig.eslint.json            # ESLint type-checking configuration
 ├── vite.config.ts
+├── .eslintrc.cjs                   # ESLint configuration
 ├── netlify/
 │   └── functions/
 │       ├── auth_start.ts           # OAuth initiation
@@ -458,6 +515,19 @@ picsift/
 
 ---
 
+## TypeScript Standards Integration
+
+This project follows the TypeScript Standards outlined in `TYPESCRIPT_STANDARDS.md`. Key requirements:
+
+- **TSConfig Structure**: Proper base config with all required compiler options
+- **ESLint**: Type-checked linting with `projectService: true`
+- **Code Patterns**: No `any`, proper error handling, type-safe patterns
+- **Validation**: `npm run typecheck` and `npm run lint` must pass with zero errors
+
+The TypeScript standards are integrated into Phase 1 (setup), Phase 4 (types), Phase 7 (error handling), and Phase 8 (testing). See `TYPESCRIPT_STANDARDS.md` for detailed implementation guidance.
+
+---
+
 ## Next Steps
 
-Start with **Phase 1: Project Setup & Configuration** to initialize the project structure and ensure all security measures are in place before writing any code that handles sensitive data.
+Start with **Phase 1: Project Setup & Configuration** to initialize the project structure, set up TypeScript standards, and ensure all security measures are in place before writing any code that handles sensitive data.
