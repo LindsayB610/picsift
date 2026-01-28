@@ -25,12 +25,14 @@ Since this is a **public repository**, we must ensure:
 1. **Initialize Vite + React + TypeScript project**
    - `npm create vite@latest . -- --template react-ts`
    - Install dependencies
+   - Install markdown rendering library (e.g., `react-markdown`)
    - Configure TypeScript
 
 2. **Set up Netlify configuration**
    - Create `netlify.toml` with function settings
    - Configure build settings
    - Set up redirect rules for SPA
+   - Configure custom domain: `picsift.lindsaybrunner.com`
 
 3. **Create project structure**
    - Set up `netlify/functions/` directory
@@ -60,7 +62,7 @@ Since this is a **public repository**, we must ensure:
 #### Tasks:
 1. **Create Dropbox app** (manual step)
    - Register app in Dropbox App Console
-   - Configure OAuth redirect URI
+   - Configure OAuth redirect URI: `https://picsift.lindsaybrunner.com/auth/callback`
    - Note App Key and App Secret (store in Netlify env vars)
 
 2. **Implement OAuth start function** (`netlify/functions/auth_start.ts`)
@@ -80,11 +82,18 @@ Since this is a **public repository**, we must ensure:
    - Token caching (in-memory, short-lived)
    - Error handling for expired tokens
 
-5. **Frontend auth flow** (`src/App.tsx`)
+5. **Login page component** (`src/components/Login.tsx`)
+   - Display README.md content (render markdown)
+   - Show "Login with Dropbox" button
+   - Clean, simple design
+   - Link to start OAuth flow
+
+6. **Frontend auth flow** (`src/App.tsx`)
    - Check authentication status
-   - Redirect to auth if not authenticated
+   - Show Login page if not authenticated
    - Handle OAuth callback
    - Store auth state (sessionStorage/localStorage)
+   - Route to main app after authentication
 
 **Security considerations:**
 - App Key/Secret: Netlify env vars only (`DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`)
@@ -93,6 +102,7 @@ Since this is a **public repository**, we must ensure:
 - Access tokens: Never sent to browser, only used server-side
 
 **Deliverables:**
+- Login page with README display
 - Working OAuth flow
 - Secure token storage
 - Auth status checking
@@ -183,8 +193,18 @@ Since this is a **public repository**, we must ensure:
    - Auth state management
    - Session initialization
    - Routing/navigation
+   - Show Login component when not authenticated
+   - Show main app when authenticated
 
-2. **Viewer component** (`src/components/Viewer.tsx`)
+2. **Login component** (`src/components/Login.tsx`)
+   - Render README.md content as markdown
+   - Install markdown rendering library (e.g., `react-markdown` or `marked`)
+   - Display README in a readable format
+   - "Login with Dropbox" button that triggers OAuth
+   - Clean, centered layout
+   - Responsive design
+
+3. **Viewer component** (`src/components/Viewer.tsx`)
    - Display single image (full-screen or large view)
    - Loading states
    - Error handling (failed image load)
@@ -212,6 +232,7 @@ Since this is a **public repository**, we must ensure:
    - Optional: confetti/celebration for delete streaks
 
 **Deliverables:**
+- Login page with README display
 - Working UI with image viewer
 - Functional keep/delete/undo actions
 - Keyboard shortcuts
@@ -373,7 +394,7 @@ DROPBOX_REFRESH_TOKEN=your_refresh_token_here  # Set after first OAuth
 ### Optional:
 ```
 DROPBOX_SOURCE_PATH=/Camera Uploads  # Default if not set
-NETLIFY_URL=https://your-site.netlify.app  # For OAuth redirect
+NETLIFY_URL=https://picsift.lindsaybrunner.com  # For OAuth redirect
 ```
 
 ---
@@ -408,6 +429,7 @@ picsift/
     ├── main.tsx                    # Entry point
     ├── index.css                   # Global styles
     └── components/
+        ├── Login.tsx               # Login page with README
         ├── Viewer.tsx              # Image display
         └── Controls.tsx            # Action buttons
 ```
@@ -429,7 +451,9 @@ picsift/
 3. **Deployment:**
    - Push to `main` branch
    - Netlify auto-deploys
+   - Configure custom domain: `picsift.lindsaybrunner.com` in Netlify
    - Set environment variables in Netlify dashboard
+   - Update Dropbox OAuth redirect URI to match custom domain
    - Test production deployment
 
 ---
