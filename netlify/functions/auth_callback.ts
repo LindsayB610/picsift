@@ -270,7 +270,20 @@ export const handler = async (
       }
     }
 
-    // Redirect to app with success so user lands on the app, not raw JSON
+    // In production, redirect with tokens in URL fragment so the app can show a simple "add to Netlify" setup screen (no terminal or logs needed)
+    if (!isLocalDev) {
+      const hash = `#setup=1&account_id=${encodeURIComponent(account_id)}&refresh_token=${encodeURIComponent(refresh_token)}`;
+      const redirectUrl = `${appBase}/${hash}`;
+      return {
+        statusCode: 302,
+        headers: {
+          Location: redirectUrl,
+          'Set-Cookie': clearCookieHeader,
+        },
+      };
+    }
+
+    // Local dev: redirect to app with success (tokens written to .env)
     const redirectUrl = `${appBase}/?auth=success&account_id=${encodeURIComponent(account_id)}`;
 
     return {

@@ -50,6 +50,7 @@ function getBaseUrl(): string {
 export const handler = async (
   event: HandlerEvent,
 ): Promise<HandlerResponse> => {
+  await Promise.resolve();
   if (event.httpMethod !== 'GET') {
     return {
       statusCode: 405,

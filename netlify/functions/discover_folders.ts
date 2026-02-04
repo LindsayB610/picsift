@@ -18,6 +18,12 @@ type HandlerResponse = {
   body?: string;
 };
 
+/** In-memory cache for folder discovery (1 hour TTL, per warm instance) */
+const FOLDER_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+let folderCache:
+  | { maxDepth: number; result: { folders: FolderInfo[]; total_folders: number }; expiresAt: number }
+  | null = null;
+
 /**
  * Image file extensions
  */
@@ -207,6 +213,20 @@ export const handler = async (
       10,
     );
 
+    // Return cached result if valid (same maxDepth, within TTL)
+    if (
+      folderCache &&
+      folderCache.maxDepth === maxDepth &&
+      folderCache.expiresAt > Date.now()
+    ) {
+      console.log('[DISCOVER] Returning cached result');
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(folderCache.result),
+      };
+    }
+
     // Create Dropbox client
     const dbx = await createDropboxClient();
     
@@ -289,13 +309,19 @@ export const handler = async (
     // Sort by image count (descending)
     folders.sort((a, b) => b.image_count - a.image_count);
 
+    const result = { folders, total_folders: folders.length };
+
+    // Cache result (1 hour TTL)
+    folderCache = {
+      maxDepth,
+      result,
+      expiresAt: Date.now() + FOLDER_CACHE_TTL_MS,
+    };
+
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        folders,
-        total_folders: folders.length,
-      }),
+      body: JSON.stringify(result),
     };
   } catch (error) {
     console.error('[DISCOVER] Folder discovery error:', error);

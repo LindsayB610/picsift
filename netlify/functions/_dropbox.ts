@@ -6,9 +6,9 @@
 // Load .env file for local development (Netlify Dev doesn't auto-load .env)
 if (process.env.NODE_ENV !== 'production' && !process.env.NETLIFY) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
     const path = require('path');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
     require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
   } catch {
     // dotenv not available, continue without it

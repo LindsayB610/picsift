@@ -16,8 +16,11 @@ type HandlerResponse = {
 
 export const handler = async (
   _event: HandlerEvent,
-): Promise<HandlerResponse> => ({
-  statusCode: 200,
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ status: "ok" }),
-});
+): Promise<HandlerResponse> => {
+  await Promise.resolve();
+  return {
+    statusCode: 200,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "ok" }),
+  };
+};

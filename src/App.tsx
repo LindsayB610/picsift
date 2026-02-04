@@ -12,7 +12,185 @@ import type { AuthState, FolderInfo } from './types';
 const AUTH_STORAGE_KEY = 'picsift:auth';
 const FOLDER_PREFERENCE_KEY = 'picsift:selectedFolder';
 
-type AppState = 'loading' | 'login' | 'folder-selection' | 'ready';
+type AppState = 'loading' | 'login' | 'setup' | 'folder-selection' | 'ready';
+
+const SETUP_TOKENS_KEY = 'picsift:setup_tokens';
+
+function SetupAddTokens({
+  onContinue,
+  onCancel,
+}: {
+  onContinue: () => void;
+  onCancel: () => void;
+}) {
+  const [tokens, setTokens] = useState<{
+    refreshToken: string;
+    accountId: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem(SETUP_TOKENS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { refreshToken: string; accountId: string };
+        if (parsed.refreshToken && parsed.accountId) {
+          setTokens(parsed);
+        }
+      } catch {
+        sessionStorage.removeItem(SETUP_TOKENS_KEY);
+      }
+    }
+  }, []);
+
+  const copyToClipboard = (text: string) => {
+    void navigator.clipboard.writeText(text);
+  };
+
+  if (!tokens) {
+    return (
+      <div style={{ textAlign: 'center', color: 'var(--text)' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        maxWidth: '560px',
+        padding: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5rem',
+      }}
+    >
+      <h1 style={{ fontFamily: 'var(--sans)', color: 'var(--text-h)', margin: 0, fontSize: '1.5rem' }}>
+        One more step
+      </h1>
+      <p style={{ color: 'var(--text)', margin: 0, lineHeight: 1.5 }}>
+        Add these two values in Netlify so the app can use your Dropbox:
+      </p>
+      <ol style={{ color: 'var(--text)', margin: 0, paddingLeft: '1.25rem', lineHeight: 1.6 }}>
+        <li>Open your Netlify dashboard → your PicSift site.</li>
+        <li>Go to <strong>Site configuration</strong> → <strong>Environment variables</strong>.</li>
+        <li>Click <strong>Add a variable</strong> (or edit if they exist) and add the two below.</li>
+        <li>Go to <strong>Deploys</strong> → <strong>Trigger deploy</strong> → <strong>Deploy site</strong>.</li>
+      </ol>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>
+            DROPBOX_REFRESH_TOKEN
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="text"
+              readOnly
+              value={tokens.refreshToken}
+              style={{
+                flex: 1,
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.85rem',
+                fontFamily: 'monospace',
+                border: '1px solid var(--border, #e5e4e7)',
+                borderRadius: '6px',
+                backgroundColor: 'var(--bg-secondary, #f5f5f5)',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => copyToClipboard(tokens.refreshToken)}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.9rem',
+                backgroundColor: 'var(--accent, #0061ff)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>
+            AUTHORIZED_DROPBOX_ACCOUNT_ID
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="text"
+              readOnly
+              value={tokens.accountId}
+              style={{
+                flex: 1,
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.85rem',
+                fontFamily: 'monospace',
+                border: '1px solid var(--border, #e5e4e7)',
+                borderRadius: '6px',
+                backgroundColor: 'var(--bg-secondary, #f5f5f5)',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => copyToClipboard(tokens.accountId)}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.9rem',
+                backgroundColor: 'var(--accent, #0061ff)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.9rem' }}>
+        After you’ve added both and triggered a new deploy, click below.
+      </p>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={onContinue}
+          style={{
+            padding: '0.75rem 1.5rem',
+            fontSize: '1rem',
+            fontWeight: 600,
+            backgroundColor: 'var(--accent, #0061ff)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+          }}
+        >
+          I’ve added them, continue
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            padding: '0.75rem 1.5rem',
+            fontSize: '1rem',
+            backgroundColor: 'transparent',
+            color: 'var(--text)',
+            border: '1px solid var(--border, #e5e4e7)',
+            borderRadius: '6px',
+            cursor: 'pointer',
+          }}
+        >
+          Cancel / Log out
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>('loading');
@@ -70,7 +248,7 @@ export default function App() {
   /**
    * Initialize app: check for OAuth callback, load saved auth state, check for folder preference
    */
-  const initializeApp = async () => {
+  const initializeApp = () => {
     const urlParams = new URLSearchParams(window.location.search);
     
     // Check if user wants to clear auth and re-authenticate
@@ -82,6 +260,39 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname);
       setAppState('login');
       return;
+    }
+
+    // Production: after OAuth we redirect with #setup=1&account_id=...&refresh_token=... so you can add them to Netlify
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      const hashParams = new URLSearchParams(hash);
+      const setup = hashParams.get('setup');
+      const accountIdFromHash = hashParams.get('account_id');
+      const refreshToken = hashParams.get('refresh_token');
+      if (setup === '1' && accountIdFromHash && refreshToken) {
+        const newAuthState: AuthState = { is_authenticated: true, account_id: accountIdFromHash };
+        setAuthState(newAuthState);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newAuthState));
+        sessionStorage.setItem(
+          SETUP_TOKENS_KEY,
+          JSON.stringify({ refreshToken, accountId: accountIdFromHash }),
+        );
+        window.history.replaceState({}, '', window.location.pathname + window.location.search);
+        setAppState('setup');
+        return;
+      }
+    }
+
+    // Check for setup tokens in sessionStorage (e.g. user refreshed on setup screen)
+    const storedSetup = sessionStorage.getItem(SETUP_TOKENS_KEY);
+    if (storedSetup) {
+      try {
+        JSON.parse(storedSetup);
+        setAppState('setup');
+        return;
+      } catch {
+        sessionStorage.removeItem(SETUP_TOKENS_KEY);
+      }
     }
 
     // Server redirects here after OAuth with ?auth=success&account_id=xxx or ?auth=error&message=xxx
@@ -216,6 +427,28 @@ export default function App() {
         }}
       >
         <Login />
+      </main>
+    );
+  }
+
+  if (appState === 'setup') {
+    return (
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+        }}
+      >
+        <SetupAddTokens
+          onContinue={() => {
+            sessionStorage.removeItem(SETUP_TOKENS_KEY);
+            setAppState('folder-selection');
+          }}
+          onCancel={handleLogout}
+        />
       </main>
     );
   }
