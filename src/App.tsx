@@ -49,6 +49,32 @@ const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 type AppState = "loading" | "login" | "setup" | "folder-selection" | "ready";
 
+/**
+ * Compute initial app state from URL/storage so we avoid a "Loading…" flash when
+ * returning from OAuth (auth=success) and go straight to folder-selection.
+ */
+function getInitialAppState(): AppState {
+  if (typeof window === "undefined") return "loading";
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("reauth") === "true" || urlParams.get("clear") === "true") {
+    return "login";
+  }
+  if (urlParams.get("auth") === "success" && urlParams.get("account_id")) {
+    const savedFolder = localStorage.getItem(FOLDER_PREFERENCE_KEY);
+    if (savedFolder) {
+      try {
+        const folder = JSON.parse(savedFolder) as { path?: string; name?: string; image_count?: number; display_path?: string };
+        if (folder?.path && folder?.name != null) return "ready";
+      } catch {
+        // invalid saved folder
+      }
+    }
+    return "folder-selection";
+  }
+  if (urlParams.get("auth") === "error") return "login";
+  return "loading";
+}
+
 function shuffleArray<T>(array: T[]): T[] {
   const out = [...array];
   for (let i = out.length - 1; i > 0; i--) {
@@ -376,7 +402,7 @@ function SetupAddTokens({
 
 export default function App() {
   const { showToast, showCriticalModal } = useFeedback();
-  const [appState, setAppState] = useState<AppState>("loading");
+  const [appState, setAppState] = useState<AppState>(getInitialAppState);
   const [, setAuthState] = useState<AuthState>({
     is_authenticated: false,
   });
@@ -1276,82 +1302,87 @@ export default function App() {
   }
 
   // Active triage: Viewer + Controls + settings gear
+  // On mobile, controls are in a fixed bottom bar (triage-controls-bar) so they stay thumb-accessible
   return (
-    <main className="page-main">
-      <div
-        className="content-wrap"
-        style={{
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.25rem",
-          alignItems: "center",
-        }}
-      >
-        <header
+    <main className="page-main page-main--triage">
+      <div className="triage-scroll">
+        <div
+          className="content-wrap"
           style={{
             width: "100%",
             display: "flex",
+            flexDirection: "column",
+            gap: "1.25rem",
             alignItems: "center",
-            justifyContent: "space-between",
           }}
         >
-          <h1
-            className="text-gradient"
+          <header
             style={{
-              fontFamily: "var(--sans)",
-              fontWeight: 600,
-              fontSize: "1.25rem",
-              margin: 0,
-            }}
-          >
-            PicSift
-          </h1>
-          <button
-            type="button"
-            className="touch-target"
-            onClick={() => setShowSettings(true)}
-            style={{
-              width: "var(--touch-min)",
-              height: "var(--touch-min)",
-              padding: 0,
-              border: "none",
-              borderRadius: "8px",
-              backgroundColor: "transparent",
-              color: "var(--text)",
-              cursor: "pointer",
+              width: "100%",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-            }}
-            aria-label="Settings"
-          >
-            <SettingsIcon sx={{ fontSize: 24 }} />
-          </button>
-        </header>
-
-        <Viewer currentEntry={currentEntry} nextEntry={nextEntry} />
-
-        {actionError && (
-          <p
-            role="alert"
-            style={{
-              margin: 0,
-              padding: "0.5rem 0.75rem",
-              fontSize: "0.875rem",
-              color: "var(--error-text)",
-              backgroundColor: "var(--error-bg)",
-              border: "1px solid var(--error-border)",
-              borderRadius: "8px",
-              width: "100%",
-              maxWidth: "var(--content-max)",
-              textAlign: "center",
+              justifyContent: "space-between",
             }}
           >
-            {actionError}
-          </p>
-        )}
+            <h1
+              className="text-gradient"
+              style={{
+                fontFamily: "var(--sans)",
+                fontWeight: 600,
+                fontSize: "1.25rem",
+                margin: 0,
+              }}
+            >
+              PicSift
+            </h1>
+            <button
+              type="button"
+              className="touch-target"
+              onClick={() => setShowSettings(true)}
+              style={{
+                width: "var(--touch-min)",
+                height: "var(--touch-min)",
+                padding: 0,
+                border: "none",
+                borderRadius: "8px",
+                backgroundColor: "transparent",
+                color: "var(--text)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              aria-label="Settings"
+            >
+              <SettingsIcon sx={{ fontSize: 24 }} />
+            </button>
+          </header>
 
+          <Viewer currentEntry={currentEntry} nextEntry={nextEntry} />
+
+          {actionError && (
+            <p
+              role="alert"
+              style={{
+                margin: 0,
+                padding: "0.5rem 0.75rem",
+                fontSize: "0.875rem",
+                color: "var(--error-text)",
+                backgroundColor: "var(--error-bg)",
+                border: "1px solid var(--error-border)",
+                borderRadius: "8px",
+                width: "100%",
+                maxWidth: "var(--content-max)",
+                textAlign: "center",
+              }}
+            >
+              {actionError}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="triage-controls-bar">
         <Controls
           onKeep={onKeep}
           onDelete={() => void onDelete()}
@@ -1361,7 +1392,6 @@ export default function App() {
           canUndo={undoStack.length > 0}
           isBusy={actionBusy}
         />
-
         <div className="actions-row" style={{ marginTop: "0.5rem" }}>
           <button
             type="button"

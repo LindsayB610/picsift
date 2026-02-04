@@ -105,6 +105,34 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Triage view on mobile: pin Keep/Delete/Undo to bottom so they don’t shift with image height */
+@media (max-width: 639px) {
+  .page-main--triage {
+    justify-content: flex-start;
+    min-height: 100dvh;
+    min-height: 100svh;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  .page-main--triage .triage-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--page-padding) var(--page-padding-right) 1rem
+      var(--page-padding);
+  }
+  .page-main--triage .triage-controls-bar {
+    flex-shrink: 0;
+    width: 100%;
+    padding: 0.75rem var(--page-padding-right)
+      max(0.75rem, env(safe-area-inset-bottom))
+      var(--page-padding);
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+  }
+}
+
 /* Content width constraint (mobile full-bleed, then max-width up) */
 .content-wrap {
   width: 100%;
@@ -193,12 +221,43 @@ a:focus-visible,
     transform: scale(1);
   }
 }
+/* Discovering folders: indeterminate loading bar */
+.discover-loading-bar {
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto 1rem;
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.discover-loading-bar-fill {
+  height: 100%;
+  width: 40%;
+  min-width: 80px;
+  background: var(--brand-gradient);
+  border-radius: 3px;
+  animation: discover-loading-slide 1.4s ease-in-out infinite;
+}
+@keyframes discover-loading-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .viewer-loading::after {
     animation: none;
   }
   .progress-bar-fill {
     transition: none;
+  }
+  .discover-loading-bar-fill {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
   }
   .keep-just-clicked {
     animation: none;

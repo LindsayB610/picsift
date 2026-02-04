@@ -4,6 +4,7 @@
  * Phase 7: normalized error display
  */
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useStartAuth } from "../hooks/useAuth";
 import { normalizeError } from "../utils/error";
@@ -68,17 +69,23 @@ PicSift is a personal photo triage web app that helps you quickly decide which p
 
 export default function Login() {
   const startAuthMutation = useStartAuth();
+  // Optimistic: show connecting state immediately on click so the UI doesn't feel unresponsive
+  const [isConnecting, setIsConnecting] = useState(false);
+  const showConnecting = isConnecting || startAuthMutation.isPending;
 
   const handleLogin = () => {
+    setIsConnecting(true);
     void startAuthMutation.mutate(undefined, {
       onSuccess: (response) => {
         // Redirect to Dropbox OAuth
         if (response.redirect_url) {
           window.location.href = response.redirect_url;
+        } else {
+          setIsConnecting(false);
         }
       },
       onError: () => {
-        // Error is handled by the error state below
+        setIsConnecting(false);
       },
     });
   };
@@ -114,7 +121,9 @@ export default function Login() {
           type="button"
           className="touch-target-inline"
           onClick={handleLogin}
-          disabled={startAuthMutation.isPending}
+          disabled={showConnecting}
+          aria-busy={showConnecting}
+          aria-live="polite"
           style={{
             width: "100%",
             padding: "0.875rem 1.5rem",
@@ -124,13 +133,24 @@ export default function Login() {
             color: "white",
             border: "none",
             borderRadius: "8px",
-            cursor: startAuthMutation.isPending ? "not-allowed" : "pointer",
-            opacity: startAuthMutation.isPending ? 0.6 : 1,
+            cursor: showConnecting ? "wait" : "pointer",
+            opacity: showConnecting ? 0.9 : 1,
             transition: "opacity 0.2s",
+            minHeight: "var(--touch-min)",
           }}
         >
-          {startAuthMutation.isPending ? "Connecting..." : "Login with Dropbox"}
+          {showConnecting ? "Connecting…" : "Login with Dropbox"}
         </button>
+        {showConnecting && (
+          <div
+            className="discover-loading-bar"
+            style={{ marginTop: "0.25rem" }}
+            role="status"
+            aria-hidden="true"
+          >
+            <div className="discover-loading-bar-fill" />
+          </div>
+        )}
 
         {startAuthMutation.isError && (
           <div

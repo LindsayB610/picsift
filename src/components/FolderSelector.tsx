@@ -111,6 +111,14 @@ export default function FolderSelector({
         className="content-wrap"
         style={{ width: "100%", textAlign: "center" }}
       >
+        <div
+          className="discover-loading-bar"
+          role="progressbar"
+          aria-label="Discovering folders with images"
+          aria-busy="true"
+        >
+          <div className="discover-loading-bar-fill" />
+        </div>
         <p style={{ color: "var(--text)", margin: 0 }}>
           Discovering folders with images…
         </p>
