@@ -3,18 +3,18 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { handler, __clearFolderCacheForTesting } from "./discover_folders";
+import { handler, __clearFolderCacheForTesting } from "../../../netlify/functions/discover_folders";
 
-vi.mock("./_auth_store", () => ({
+vi.mock("../../../netlify/functions/_auth_store", () => ({
   requireSession: vi.fn(),
 }));
 
-vi.mock("./_dropbox", () => ({
+vi.mock("../../../netlify/functions/_dropbox", () => ({
   createDropboxClient: vi.fn(),
 }));
 
-import { requireSession } from "./_auth_store";
-import { createDropboxClient } from "./_dropbox";
+import { requireSession } from "../../../netlify/functions/_auth_store";
+import { createDropboxClient } from "../../../netlify/functions/_dropbox";
 
 type MockDbx = {
   filesListFolder: ReturnType<typeof vi.fn>;
