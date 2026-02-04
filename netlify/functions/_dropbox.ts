@@ -117,9 +117,15 @@ async function validateTokenAccount(
 ): Promise<boolean> {
   const authorizedAccountId = getAuthorizedAccountId();
   const authorizedEmail = getAuthorizedEmail();
+  const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
 
-  // If no authorization configured, allow all (development mode)
-  if (!authorizedAccountId && !authorizedEmail) {
+  // In production: require at least one to be set; otherwise reject (fail closed)
+  if (!isLocalDev && !authorizedAccountId && !authorizedEmail) {
+    return false;
+  }
+
+  // Local dev: if none configured, allow all
+  if (isLocalDev && !authorizedAccountId && !authorizedEmail) {
     return true;
   }
 
@@ -169,24 +175,19 @@ export async function getAccessToken(): Promise<string> {
   // Refresh token
   const { access_token, account_id } = await refreshAccessToken();
 
-  // Validate new token belongs to authorized user
-  // TEMPORARILY DISABLED for local dev to make testing easier
-  // In production, this should be enabled
+  // In production: always validate token belongs to authorized user
   const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
-  const authorizedAccountId = getAuthorizedAccountId();
-  const authorizedEmail = getAuthorizedEmail();
-  
-  if ((authorizedAccountId || authorizedEmail) && !isLocalDev) {
-    // Only validate in production
+  if (!isLocalDev) {
     const isValid = await validateTokenAccount(access_token, account_id);
     if (!isValid) {
+      const authorizedAccountId = getAuthorizedAccountId();
+      const authorizedEmail = getAuthorizedEmail();
       console.error(
-        `[SECURITY] Token validation failed: account_id ${account_id} is not authorized (expected: ${authorizedAccountId || authorizedEmail})`,
+        `[SECURITY] Token validation failed: account_id ${account_id} is not authorized (expected: ${authorizedAccountId || authorizedEmail || 'AUTHORIZED_DROPBOX_ACCOUNT_ID or AUTHORIZED_DROPBOX_EMAIL must be set'})`,
       );
       throw new Error('Unauthorized: Token does not belong to authorized user');
     }
-  } else if (isLocalDev) {
-    // In local dev, just log
+  } else {
     console.log(`[DROPBOX] Using token for account_id: ${account_id}`);
   }
 

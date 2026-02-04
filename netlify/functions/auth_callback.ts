@@ -152,14 +152,20 @@ function getAppBaseUrl(): string {
 }
 
 /**
- * Check if account is authorized
+ * Check if account is authorized (only this account can use the app)
  */
 function isAuthorizedAccount(accountId: string, email: string): boolean {
   const authorizedAccountId = process.env.AUTHORIZED_DROPBOX_ACCOUNT_ID;
   const authorizedEmail = process.env.AUTHORIZED_DROPBOX_EMAIL;
+  const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
 
-  // If no authorization configured, allow all (development mode)
-  if (!authorizedAccountId && !authorizedEmail) {
+  // In production: require at least one to be set; otherwise reject everyone (fail closed)
+  if (!isLocalDev && !authorizedAccountId && !authorizedEmail) {
+    return false;
+  }
+
+  // Local dev: if none configured, allow all for easier testing
+  if (isLocalDev && !authorizedAccountId && !authorizedEmail) {
     return true;
   }
 
@@ -270,20 +276,14 @@ export const handler = async (
       }
     }
 
-    // In production, redirect with tokens in URL fragment so the app can show a simple "add to Netlify" setup screen (no terminal or logs needed)
+    // In production: log tokens so you can copy from Netlify function logs (URL fragment is unreliable for long tokens)
     if (!isLocalDev) {
-      const hash = `#setup=1&account_id=${encodeURIComponent(account_id)}&refresh_token=${encodeURIComponent(refresh_token)}`;
-      const redirectUrl = `${appBase}/${hash}`;
-      return {
-        statusCode: 302,
-        headers: {
-          Location: redirectUrl,
-          'Set-Cookie': clearCookieHeader,
-        },
-      };
+      console.log('[AUTH] Add these to Netlify → Site configuration → Environment variables, then trigger a new deploy:');
+      console.log('DROPBOX_REFRESH_TOKEN=' + refresh_token);
+      console.log('AUTHORIZED_DROPBOX_ACCOUNT_ID=' + account_id);
     }
 
-    // Local dev: redirect to app with success (tokens written to .env)
+    // Redirect to app with success (no token in URL; get token from Netlify → Functions → auth_callback → Logs)
     const redirectUrl = `${appBase}/?auth=success&account_id=${encodeURIComponent(account_id)}`;
 
     return {

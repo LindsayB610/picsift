@@ -550,6 +550,18 @@ Once you've completed these steps and everything is working:
 
 ---
 
+## Only you can access your Dropbox (single-user lock)
+
+The app is on the public internet, but **only your Dropbox account** can use it:
+
+- **`AUTHORIZED_DROPBOX_ACCOUNT_ID`** (or **`AUTHORIZED_DROPBOX_EMAIL`**) in Netlify restricts who can log in and use the app.
+- When someone clicks "Login with Dropbox", the app checks their account ID against this value. If it doesn’t match, they see **"Access denied. This app is restricted to authorized users only."** and no tokens are stored.
+- Every Dropbox API call (folders, photos, etc.) also checks that the token belongs to the authorized account.
+
+**What you need to do:** Set **`AUTHORIZED_DROPBOX_ACCOUNT_ID`** in Netlify to your Dropbox account ID (e.g. `dbid:xxxxxxxxxxxxx`). You get that value from the auth_callback log when you first log in, or from the "How to fix" instructions when you add the refresh token. Once set and redeployed, only that account can use the app; everyone else is rejected at login.
+
+---
+
 ## Quick Reference: Environment Variables Checklist
 
 Make sure you have all of these set (either in `.env` for local or in Netlify):
@@ -558,7 +570,7 @@ Make sure you have all of these set (either in `.env` for local or in Netlify):
 - [ ] `DROPBOX_APP_KEY` - From Dropbox App Console
 - [ ] `DROPBOX_APP_SECRET` - From Dropbox App Console  
 - [ ] `DROPBOX_REFRESH_TOKEN` - Obtained after first OAuth login
-- [ ] `AUTHORIZED_DROPBOX_ACCOUNT_ID` - Your Dropbox account ID (format: `dbid:xxxxxxxxxxxxx`)
+- [ ] `AUTHORIZED_DROPBOX_ACCOUNT_ID` - **Required in production:** Your Dropbox account ID (format: `dbid:xxxxxxxxxxxxx`) — only this account can use the app
 
 **Optional:**
 - `URL` - Auto-set by Netlify (backup if NETLIFY_URL not set)

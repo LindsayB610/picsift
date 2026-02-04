@@ -6,6 +6,10 @@ import type {
   AuthStartResponse,
   AuthCallbackResponse,
   DiscoverFoldersResponse,
+  ListResponse,
+  TempLinkResponse,
+  TrashResponse,
+  UndoResponse,
   ApiError,
 } from './types';
 
@@ -62,12 +66,71 @@ export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
 export async function discoverFolders(
   maxDepth: number = 3,
 ): Promise<DiscoverFoldersResponse> {
-  console.log(`[API] Calling discover_folders with max_depth=${maxDepth}`);
   const response = await fetch(
     `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`,
   );
-  console.log(`[API] Response status: ${response.status}`);
-  const data = await handleResponse<DiscoverFoldersResponse>(response);
-  console.log(`[API] Response data:`, data);
-  return data;
+  return handleResponse<DiscoverFoldersResponse>(response);
+}
+
+/**
+ * List images in a folder (or multiple folders)
+ */
+export async function listImages(
+  pathOrPaths: string | string[],
+): Promise<ListResponse> {
+  const body =
+    typeof pathOrPaths === 'string'
+      ? JSON.stringify({ path: pathOrPaths })
+      : JSON.stringify({ paths: pathOrPaths });
+  const response = await fetch(`${FUNCTIONS_BASE}/list`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+  return handleResponse<ListResponse>(response);
+}
+
+/**
+ * Get a temporary URL for displaying an image (expires in 4 hours)
+ */
+export async function getTempLink(path: string): Promise<TempLinkResponse> {
+  const response = await fetch(`${FUNCTIONS_BASE}/temp_link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+  return handleResponse<TempLinkResponse>(response);
+}
+
+/**
+ * Move a file to quarantine (soft delete)
+ */
+export async function trash(
+  path: string,
+  sessionId: string,
+): Promise<TrashResponse> {
+  const response = await fetch(`${FUNCTIONS_BASE}/trash`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, session_id: sessionId }),
+  });
+  return handleResponse<TrashResponse>(response);
+}
+
+/**
+ * Restore a file from quarantine (undo)
+ */
+export async function undo(
+  trashedPath: string,
+  originalPath: string,
+): Promise<UndoResponse> {
+  const response = await fetch(`${FUNCTIONS_BASE}/undo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      trashed_path: trashedPath,
+      original_path: originalPath,
+    }),
+  });
+  return handleResponse<UndoResponse>(response);
 }

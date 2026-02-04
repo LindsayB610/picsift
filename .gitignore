@@ -43,3 +43,4 @@ lerna-debug.log*
 
 # Compiled Netlify functions (JS output from TS)
 netlify/functions/**/*.js
+netlify/functions/netlify/

@@ -78,6 +78,7 @@ export default function FolderSelector({
   }
 
   if (error) {
+    const needsRefreshToken = typeof error === 'string' && error.includes('DROPBOX_REFRESH_TOKEN');
     return (
       <div className="content-wrap" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div
@@ -91,6 +92,28 @@ export default function FolderSelector({
         >
           {error}
         </div>
+        {needsRefreshToken && (
+          <div
+            style={{
+              padding: '1rem',
+              backgroundColor: 'var(--bg-secondary, #f5f5f5)',
+              color: 'var(--text)',
+              borderRadius: '8px',
+              border: '1px solid var(--border, #e5e4e7)',
+              fontSize: '0.9375rem',
+              lineHeight: 1.5,
+            }}
+          >
+            <strong>How to fix:</strong>
+            <ol style={{ margin: '0.5rem 0 0 1rem', paddingLeft: '0.5rem' }}>
+              <li>Go to <strong>https://picsift.lindsaybrunner.com/?reauth=true</strong> and click Login with Dropbox again.</li>
+              <li>After Dropbox redirects you back, go to <strong>Netlify</strong> → your PicSift site → <strong>Functions</strong> → <strong>auth_callback</strong> → <strong>Logs</strong>.</li>
+              <li>Find the line that says <code>DROPBOX_REFRESH_TOKEN=...</code> and copy the full value after the <code>=</code>.</li>
+              <li>In Netlify go to <strong>Site configuration</strong> → <strong>Environment variables</strong>. Add <code>DROPBOX_REFRESH_TOKEN</code> with that value, and <code>AUTHORIZED_DROPBOX_ACCOUNT_ID</code> (from the log line above it).</li>
+              <li><strong>Deploys</strong> → <strong>Trigger deploy</strong> → <strong>Deploy site</strong>. When it finishes, click Retry below.</li>
+            </ol>
+          </div>
+        )}
         <button
           type="button"
           className="touch-target-inline"
