@@ -4,6 +4,44 @@ Quick reference for deploying PicSift to Netlify. For full setup (first-time Dro
 
 ---
 
+## Phase 9: Deployment Checklist
+
+Use this checklist to deploy and verify the app (see [PROJECT_PLAN.md](PROJECT_PLAN.md) Phase 9).
+
+### 1. Netlify setup
+
+- [ ] **Connect GitHub repository**
+  - Netlify → **Add new site** → **Import an existing project** → GitHub → select `picsift` repo.
+- [ ] **Configure build settings** (Netlify usually auto-detects from `netlify.toml`):
+  - **Build command:** `npm run build`
+  - **Publish directory:** `dist`
+  - **Functions directory:** `netlify/functions`
+- [ ] **Set environment variables** (see [Environment variables](#environment-variables) below).
+- [ ] **Configure custom domain** (optional): e.g. `picsift.lindsaybrunner.com` in **Domain settings** → Add custom domain. See [SETUP_GUIDE.md](SETUP_GUIDE.md) Step 0 for DNS and HTTPS.
+
+### 2. Environment variables
+
+Set in **Netlify** → **Site configuration** → **Environment variables**. Required for production:
+
+- [ ] `DROPBOX_APP_KEY`
+- [ ] `DROPBOX_APP_SECRET`
+- [ ] `DROPBOX_REFRESH_TOKEN` (set after first OAuth; see SETUP_GUIDE)
+- [ ] `AUTHORIZED_DROPBOX_ACCOUNT_ID` (or `AUTHORIZED_DROPBOX_EMAIL`) for single-user access control
+- [ ] `NETLIFY_URL` (recommended): your site URL, e.g. `https://picsift.lindsaybrunner.com` — ensures correct OAuth redirect
+
+After changing env vars: **Deploys** → **Trigger deploy** → **Deploy site**.
+
+### 3. Deploy and verify
+
+- [ ] **Deploy:** Push to `main` (or your connected branch); Netlify auto-deploys. Or trigger deploy from the Netlify dashboard.
+- [ ] **Test OAuth:** Visit the site → Log in with Dropbox → complete redirect and return to app.
+- [ ] **Test complete user flow:** Select folder → start session → keep/delete images → undo → finish session.
+- [ ] **Verify security:** From a different Dropbox account, attempt login — you should see "Access denied" and no tokens stored. Confirm no tokens appear in browser (e.g. DevTools → Application/Storage).
+
+**Deliverables:** Live app on Netlify, working OAuth, secure deployment. See [Security checklist](PROJECT_PLAN.md#security-checklist) in PROJECT_PLAN before going live.
+
+---
+
 ## Build & Deploy
 
 - **Build command:** `npm run build`
@@ -27,6 +65,10 @@ Set these in **Netlify** → **Site configuration** → **Environment variables*
 | `NETLIFY_URL`                   | Recommended      | `https://picsift.lindsaybrunner.com` — ensures correct OAuth redirect          |
 
 **Optional:** `DROPBOX_SOURCE_PATH`, `URL` (auto-set by Netlify).
+
+**Getting your account ID:** After you have `DROPBOX_REFRESH_TOKEN` set, open  
+`https://your-site.netlify.app/.netlify/functions/current_account`  
+(or your custom domain + `/.netlify/functions/current_account`) in a browser. The response includes `account_id` and `email`. Copy the `account_id` value into `AUTHORIZED_DROPBOX_ACCOUNT_ID` in Netlify. Alternatively, use `AUTHORIZED_DROPBOX_EMAIL` with the returned `email` and skip the ID.
 
 After changing environment variables, trigger a new deploy: **Deploys** → **Trigger deploy** → **Deploy site**.
 

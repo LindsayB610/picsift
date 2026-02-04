@@ -629,11 +629,20 @@ Since this is a **public repository**, we must ensure:
 - Working OAuth
 - Secure deployment
 
+**Phase 9 implementation notes:**
+
+- **Netlify setup:** Connect repo, set build command (`npm run build`), publish directory (`dist`), functions directory (`netlify/functions`). Custom domain is optional; see [SETUP_GUIDE.md](SETUP_GUIDE.md) Step 0.
+- **Environment variables:** Set in Netlify dashboard (Site configuration → Environment variables). Required: `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`, `DROPBOX_REFRESH_TOKEN`, `AUTHORIZED_DROPBOX_ACCOUNT_ID` (or `AUTHORIZED_DROPBOX_EMAIL`). Recommended: `NETLIFY_URL` for correct OAuth redirect. See [DEPLOYMENT.md](DEPLOYMENT.md) and [Environment Variables Reference](#environment-variables-reference) below.
+- **Deploy and verify:** Push to connected branch for auto-deploy, or trigger deploy from dashboard. Run through [DEPLOYMENT.md Phase 9 checklist](DEPLOYMENT.md#phase-9-deployment-checklist): OAuth, full user flow, and security check (unauthorized account rejected, no tokens in browser).
+- **Security:** Before going live, complete the [Security Checklist](#security-checklist) below.
+
 ---
 
 ## Security Checklist
 
 Before deploying, verify:
+
+> **Verification:** A codebase verification of each item is in [docs/SECURITY_CHECKLIST_VERIFICATION.md](SECURITY_CHECKLIST_VERIFICATION.md). Use it when auditing or before release.
 
 - [ ] No secrets in code (grep for API keys, tokens, passwords)
 - [ ] `.env` file in `.gitignore`

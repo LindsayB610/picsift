@@ -278,3 +278,21 @@ export async function dbxCall<T>(
 export function clearTokenCache(): void {
   tokenCache = null;
 }
+
+/**
+ * Get current Dropbox account id and email using the refresh token.
+ * For setup only: use this to get AUTHORIZED_DROPBOX_ACCOUNT_ID for Netlify env vars.
+ * Does not require AUTHORIZED_* to be set (uses refresh only, no validation).
+ */
+export async function getCurrentAccountForSetup(): Promise<{
+  account_id: string;
+  email: string;
+}> {
+  const { access_token, account_id } = await refreshAccessToken();
+  const dbx = new Dropbox({ accessToken: access_token });
+  const accountInfo = await dbx.usersGetCurrentAccount();
+  return {
+    account_id,
+    email: accountInfo.result.email,
+  };
+}

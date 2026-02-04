@@ -95,7 +95,7 @@ Required environment variables are documented in `.env.example`. Copy it to `.en
 ## Docs
 
 - [Setup Guide](docs/SETUP_GUIDE.md) — local dev, env, OAuth, deploy
-- [Deployment](docs/DEPLOYMENT.md) — Netlify deploy and environment variables
+- [Deployment](docs/DEPLOYMENT.md) — Phase 9 checklist, Netlify deploy, environment variables
 - [Testing & polish](docs/TESTING_AND_POLISH.md) — Phase 8 checklist (security, manual testing, test data)
 - [Build notes & plan](docs/BUILD_NOTES.md) — MVP scope and decisions
 - [Accessibility testing](docs/ACCESSIBILITY_TESTING.md) — how a11y tests run
