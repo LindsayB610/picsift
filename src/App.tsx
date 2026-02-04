@@ -44,8 +44,69 @@ const MAX_QUEUE_SIZE = 5000;
 const AUTH_STORAGE_KEY = "picsift:auth";
 const FOLDER_PREFERENCE_KEY = "picsift:selectedFolder";
 const SESSION_PERSIST_KEY = "picsift:session";
+const FOLDER_PROGRESS_KEY = "picsift:folderProgress";
 /** Sessions older than this are not offered for resume (Phase 6) */
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
+
+/** Per-folder progress: path_lower of images already reviewed (kept or deleted) */
+type FolderProgressStore = Record<string, string[]>;
+
+function getFolderProgress(folderPath: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(FOLDER_PROGRESS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as FolderProgressStore;
+    const list = parsed[folderPath];
+    return Array.isArray(list) ? new Set(list as string[]) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function addReviewedPath(folderPath: string, pathLower: string): void {
+  try {
+    const raw = localStorage.getItem(FOLDER_PROGRESS_KEY);
+    const store: FolderProgressStore = raw ? (JSON.parse(raw) as FolderProgressStore) : {};
+    const list = store[folderPath] ?? [];
+    if (!list.includes(pathLower)) {
+      store[folderPath] = [...list, pathLower];
+      localStorage.setItem(FOLDER_PROGRESS_KEY, JSON.stringify(store));
+    }
+  } catch {
+    // quota or other; progress continues in memory for this session
+  }
+}
+
+function removeReviewedPath(folderPath: string, pathLower: string): void {
+  try {
+    const raw = localStorage.getItem(FOLDER_PROGRESS_KEY);
+    if (!raw) return;
+    const store = JSON.parse(raw) as FolderProgressStore;
+    const list = store[folderPath];
+    if (!Array.isArray(list)) return;
+    const next = list.filter((p) => p !== pathLower);
+    if (next.length === 0) {
+      delete store[folderPath];
+    } else {
+      store[folderPath] = next;
+    }
+    localStorage.setItem(FOLDER_PROGRESS_KEY, JSON.stringify(store));
+  } catch {
+    // ignore
+  }
+}
+
+function clearFolderProgress(folderPath: string): void {
+  try {
+    const raw = localStorage.getItem(FOLDER_PROGRESS_KEY);
+    if (!raw) return;
+    const store = JSON.parse(raw) as FolderProgressStore;
+    delete store[folderPath];
+    localStorage.setItem(FOLDER_PROGRESS_KEY, JSON.stringify(store));
+  } catch {
+    // ignore
+  }
+}
 
 type AppState = "loading" | "login" | "setup" | "folder-selection" | "ready";
 
@@ -689,55 +750,105 @@ export default function App() {
   };
 
   /**
-   * Start a triage session: fetch images, shuffle, set session state (Phase 6: clear old session, persist full state)
-   * Phase 7: dedupe by path, cap queue size, toast on error with retry.
+   * Start a triage session: fetch images, filter out already-reviewed, shuffle, set session state.
+   * If user had a resumable session and chose "Start new session", merge that session's seen paths
+   * into folder progress so we never show the same pic again.
    */
-  const startSession = useCallback(async () => {
-    if (!selectedFolder) return;
-    clearPersistedSession();
-    setSessionListError(null);
-    setSessionListLoading(true);
-    try {
-      const res = await listImages(selectedFolder.path);
-      const rawEntries = res.entries ?? [];
-      // Dedupe by path (edge case: duplicate files)
-      const seen = new Set<string>();
-      const entries = rawEntries.filter((e) => {
-        const key = e.path_lower ?? e.path_display;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      if (entries.length === 0) {
-        setSessionListError("No images found in this folder.");
+  const startSession = useCallback(
+    async (options?: { clearProgress?: boolean }) => {
+      if (!selectedFolder) return;
+      setSessionListError(null);
+      setSessionListLoading(true);
+
+      // If starting new while we have a resumable session for this folder, merge "seen" into folder progress
+      const saved = loadSessionFromStorage();
+      if (
+        saved &&
+        saved.folder.path === selectedFolder.path &&
+        isSessionResumable(saved)
+      ) {
+        try {
+          const raw = localStorage.getItem(FOLDER_PROGRESS_KEY);
+          const store: FolderProgressStore = raw
+            ? (JSON.parse(raw) as FolderProgressStore)
+            : {};
+          const list = store[selectedFolder.path] ?? [];
+          const seenSet = new Set(list);
+          for (let i = 0; i < saved.index && i < saved.queue.length; i++) {
+            const e = saved.queue[i];
+            const key = e?.path_lower ?? e?.path_display;
+            if (key && !seenSet.has(key)) {
+              seenSet.add(key);
+              list.push(key);
+            }
+          }
+          if (list.length > 0) {
+            store[selectedFolder.path] = list;
+            localStorage.setItem(FOLDER_PROGRESS_KEY, JSON.stringify(store));
+          }
+        } catch {
+          // ignore
+        }
+      }
+      clearPersistedSession();
+
+      if (options?.clearProgress) {
+        clearFolderProgress(selectedFolder.path);
+      }
+
+      try {
+        const res = await listImages(selectedFolder.path);
+        const rawEntries = res.entries ?? [];
+        // Dedupe by path (edge case: duplicate files)
+        const seen = new Set<string>();
+        const deduped = rawEntries.filter((e) => {
+          const key = e.path_lower ?? e.path_display;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        const reviewed = getFolderProgress(selectedFolder.path);
+        const entries = options?.clearProgress
+          ? deduped
+          : deduped.filter((e) => !reviewed.has(e.path_lower ?? e.path_display));
+
+        if (entries.length === 0) {
+          setSessionListError(
+            options?.clearProgress
+              ? "No images found in this folder."
+              : "You've reviewed all images in this folder. Start completely fresh to see them again."
+          );
+          setSessionListLoading(false);
+          return;
+        }
+        const capped =
+          entries.length > MAX_QUEUE_SIZE
+            ? entries.slice(0, MAX_QUEUE_SIZE)
+            : entries;
+        if (capped.length < entries.length) {
+          showToast(
+            `Showing first ${MAX_QUEUE_SIZE} of ${entries.length} images. Start another session for the rest.`
+          );
+        }
+        const shuffled = shuffleArray(capped);
+        const id = crypto.randomUUID();
+        setSessionQueue(shuffled);
+        setSessionIndex(0);
+        setSessionId(id);
+        setUndoStack([]);
         setSessionListLoading(false);
-        return;
+        saveSessionToStorage(id, selectedFolder, shuffled, 0, []);
+      } catch (err: unknown) {
+        const message = normalizeError(err);
+        setSessionListError(message);
+        showApiError(err, () => void startSession());
+      } finally {
+        setSessionListLoading(false);
       }
-      const capped =
-        entries.length > MAX_QUEUE_SIZE
-          ? entries.slice(0, MAX_QUEUE_SIZE)
-          : entries;
-      if (capped.length < entries.length) {
-        showToast(
-          `Showing first ${MAX_QUEUE_SIZE} of ${entries.length} images. Start another session for the rest.`
-        );
-      }
-      const shuffled = shuffleArray(capped);
-      const id = crypto.randomUUID();
-      setSessionQueue(shuffled);
-      setSessionIndex(0);
-      setSessionId(id);
-      setUndoStack([]);
-      setSessionListLoading(false);
-      saveSessionToStorage(id, selectedFolder, shuffled, 0, []);
-    } catch (err: unknown) {
-      const message = normalizeError(err);
-      setSessionListError(message);
-      showApiError(err, () => void startSession());
-    } finally {
-      setSessionListLoading(false);
-    }
-  }, [selectedFolder, showApiError, showToast]);
+    },
+    [selectedFolder, showApiError, showToast]
+  );
 
   const currentEntry = sessionQueue[sessionIndex] ?? null;
   const nextEntry = sessionQueue[sessionIndex + 1] ?? null;
@@ -749,6 +860,10 @@ export default function App() {
   const onKeep = useCallback(() => {
     if (actionBusy || !currentEntry || !selectedFolder || !sessionId) return;
     setActionError(null);
+    addReviewedPath(
+      selectedFolder.path,
+      currentEntry.path_lower ?? currentEntry.path_display
+    );
     const next = sessionIndex + 1;
     setSessionIndex(next);
     saveSessionToStorage(
@@ -778,6 +893,10 @@ export default function App() {
         throw new Error(result.error ?? "Delete failed");
       }
       const record = result.trash_record;
+      addReviewedPath(
+        selectedFolder.path,
+        currentEntry.path_lower ?? currentEntry.path_display
+      );
       const newUndoItem: UndoStackItem = { record, entry: currentEntry };
       setUndoStack((prev) => [...prev, newUndoItem]);
       setSessionIndex((i) => i + 1);
@@ -820,6 +939,10 @@ export default function App() {
       if (!result.success) {
         throw new Error(result.error ?? "Undo failed");
       }
+      removeReviewedPath(
+        selectedFolder.path,
+        item.entry.path_lower ?? item.entry.path_display
+      );
       const newUndoStack = undoStack.slice(0, -1);
       const newQueue = [...sessionQueue];
       newQueue.splice(sessionIndex, 0, item.entry);
@@ -1114,10 +1237,7 @@ export default function App() {
             <button
               type="button"
               className="touch-target-inline"
-              onClick={() => {
-                if (canResume) clearPersistedSession();
-                void startSession();
-              }}
+              onClick={() => void startSession()}
               disabled={sessionListLoading}
               style={{
                 fontSize: "0.9375rem",
@@ -1137,6 +1257,24 @@ export default function App() {
                 : canResume
                   ? "Start new session"
                   : "Start session"}
+            </button>
+            <button
+              type="button"
+              className="touch-target-inline"
+              onClick={() => void startSession({ clearProgress: true })}
+              disabled={sessionListLoading}
+              style={{
+                fontSize: "0.9375rem",
+                fontWeight: 500,
+                backgroundColor: "transparent",
+                color: "var(--text)",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                cursor: sessionListLoading ? "wait" : "pointer",
+                opacity: sessionListLoading ? 0.8 : 1,
+              }}
+            >
+              Start completely fresh
             </button>
             <button
               type="button"
