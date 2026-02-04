@@ -56,5 +56,13 @@ export default [
       "react/react-in-jsx-scope": "off",
     },
   },
+  {
+    // Relax type-checked rules in tests (vitest/axe types not fully resolved by ESLint)
+    files: ["src/test/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/require-await": "off",
+    },
+  },
   eslintConfigPrettier,
 ];

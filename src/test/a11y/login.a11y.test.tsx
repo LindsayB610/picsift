@@ -29,7 +29,7 @@ describe("Login accessibility", () => {
     expect(results).toHaveNoViolations();
   });
 
-  it("has a primary button with an accessible name", async () => {
+  it("has a primary button with an accessible name", () => {
     render(<Login />);
     const button = screen.getByRole("button", { name: /login with dropbox/i });
     expect(button).toBeInTheDocument();

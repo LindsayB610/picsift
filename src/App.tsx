@@ -3,16 +3,50 @@
  * Handles authentication flow and routing
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import confetti from 'canvas-confetti';
+import SettingsIcon from '@mui/icons-material/Settings';
 import Login from './components/Login';
 import FolderSelector from './components/FolderSelector';
+import Viewer from './components/Viewer';
+import Controls from './components/Controls';
+import Settings, {
+  getConfettiFrequency,
+  type ConfettiFrequency,
+} from './components/Settings';
 import { useAuthCallback } from './hooks/useAuth';
-import type { AuthState, FolderInfo } from './types';
+import { listImages, trash as apiTrash, undo as apiUndo } from './api';
+import type { AuthState, FolderInfo, DbxEntry, TrashRecord } from './types';
 
 const AUTH_STORAGE_KEY = 'picsift:auth';
 const FOLDER_PREFERENCE_KEY = 'picsift:selectedFolder';
+const SESSION_PERSIST_KEY = 'picsift:session';
 
 type AppState = 'loading' | 'login' | 'setup' | 'folder-selection' | 'ready';
+
+/** Undo stack item: record from API + entry for re-inserting into queue */
+type UndoItem = { record: TrashRecord; entry: DbxEntry };
+
+function shuffleArray<T>(array: T[]): T[] {
+  const out = [...array];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
+}
+
+function maybeConfetti(trashedCount: number, frequency: ConfettiFrequency): void {
+  if (frequency === 'off') return;
+  const n = frequency === '1' ? 1 : parseInt(frequency, 10);
+  if (Number.isNaN(n) || n <= 0) return;
+  if (trashedCount % n !== 0) return;
+  void confetti({
+    particleCount: 80,
+    spread: 70,
+    origin: { y: 0.6 },
+  });
+}
 
 const SETUP_TOKENS_KEY = 'picsift:setup_tokens';
 
@@ -204,6 +238,17 @@ export default function App() {
   const [selectedFolder, setSelectedFolder] = useState<FolderInfo | null>(
     null,
   );
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Session state (triage)
+  const [sessionQueue, setSessionQueue] = useState<DbxEntry[]>([]);
+  const [sessionIndex, setSessionIndex] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<UndoItem[]>([]);
+  const [sessionListLoading, setSessionListLoading] = useState(false);
+  const [sessionListError, setSessionListError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Check for OAuth callback in URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -404,6 +449,174 @@ export default function App() {
     setAppState('folder-selection');
   };
 
+  /**
+   * Start a triage session: fetch images, shuffle, set session state
+   */
+  const startSession = useCallback(async () => {
+    if (!selectedFolder) return;
+    setSessionListError(null);
+    setSessionListLoading(true);
+    try {
+      const res = await listImages(selectedFolder.path);
+      const entries = res.entries ?? [];
+      if (entries.length === 0) {
+        setSessionListError('No images found in this folder.');
+        return;
+      }
+      const shuffled = shuffleArray(entries);
+      const id = crypto.randomUUID();
+      setSessionQueue(shuffled);
+      setSessionIndex(0);
+      setSessionId(id);
+      setUndoStack([]);
+      setSessionListLoading(false);
+      try {
+        localStorage.setItem(
+          SESSION_PERSIST_KEY,
+          JSON.stringify({ sessionId: id, index: 0, total: shuffled.length }),
+        );
+      } catch {
+        // ignore persist errors
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSessionListError(message);
+    } finally {
+      setSessionListLoading(false);
+    }
+  }, [selectedFolder]);
+
+  const currentEntry = sessionQueue[sessionIndex] ?? null;
+  const nextEntry = sessionQueue[sessionIndex + 1] ?? null;
+  const trashedCount = undoStack.length;
+  const keptCount = sessionIndex - trashedCount;
+  const totalCount = sessionQueue.length;
+  const isSessionComplete = totalCount > 0 && sessionIndex >= totalCount;
+
+  const onKeep = useCallback(() => {
+    if (actionBusy || !currentEntry) return;
+    setActionError(null);
+    const next = sessionIndex + 1;
+    setSessionIndex(next);
+    try {
+      localStorage.setItem(
+        SESSION_PERSIST_KEY,
+        JSON.stringify({
+          sessionId,
+          index: next,
+          total: totalCount,
+        }),
+      );
+    } catch {
+      // ignore
+    }
+  }, [actionBusy, currentEntry, sessionIndex, sessionId, totalCount]);
+
+  const onDelete = useCallback(async () => {
+    if (actionBusy || !currentEntry || !sessionId) return;
+    setActionError(null);
+    setActionBusy(true);
+    try {
+      const result = await apiTrash(currentEntry.path_display, sessionId);
+      if (!result.success || !result.trash_record) {
+        throw new Error(result.error ?? 'Delete failed');
+      }
+      const record = result.trash_record;
+      setUndoStack((prev) => [...prev, { record, entry: currentEntry }]);
+      setSessionIndex((i) => i + 1);
+      maybeConfetti(undoStack.length + 1, getConfettiFrequency());
+      try {
+        localStorage.setItem(
+          SESSION_PERSIST_KEY,
+          JSON.stringify({
+            sessionId,
+            index: sessionIndex + 1,
+            total: totalCount,
+          }),
+        );
+      } catch {
+        // ignore
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setActionError(message);
+      console.error('Trash error:', err);
+    } finally {
+      setActionBusy(false);
+    }
+  }, [
+    actionBusy,
+    currentEntry,
+    sessionId,
+    sessionIndex,
+    totalCount,
+    undoStack.length,
+  ]);
+
+  const onUndo = useCallback(async () => {
+    const item = undoStack[undoStack.length - 1];
+    if (actionBusy || !item || !sessionId) return;
+    setActionError(null);
+    setActionBusy(true);
+    try {
+      const result = await apiUndo(
+        item.record.trashed_path,
+        item.record.original_path,
+      );
+      if (!result.success) {
+        throw new Error(result.error ?? 'Undo failed');
+      }
+      setUndoStack((prev) => prev.slice(0, -1));
+      setSessionQueue((q) => {
+        const next = [...q];
+        next.splice(sessionIndex, 0, item.entry);
+        return next;
+      });
+      // Stay at same index so current image is the restored one
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setActionError(message);
+      console.error('Undo error:', err);
+    } finally {
+      setActionBusy(false);
+    }
+  }, [actionBusy, undoStack, sessionId, sessionIndex]);
+
+  // Clear action error after a delay so user can read it
+  useEffect(() => {
+    if (!actionError) return;
+    const t = setTimeout(() => setActionError(null), 5000);
+    return () => clearTimeout(t);
+  }, [actionError]);
+
+  // Keyboard shortcuts K, D, U
+  useEffect(() => {
+    if (appState !== 'ready' || showSettings || isSessionComplete) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      const key = e.key.toLowerCase();
+      if (key === 'k') {
+        e.preventDefault();
+        onKeep();
+      } else if (key === 'd') {
+        e.preventDefault();
+        void onDelete();
+      } else if (key === 'u') {
+        e.preventDefault();
+        void onUndo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    appState,
+    showSettings,
+    isSessionComplete,
+    onKeep,
+    onDelete,
+    onUndo,
+  ]);
+
   if (appState === 'loading') {
     return (
       <main className="page-main">
@@ -445,109 +658,372 @@ export default function App() {
     );
   }
 
-  // appState === 'ready' — mobile-first homepage (black bg, brand colors)
-  // TODO: Show main app (Viewer, Controls, etc.) in Phase 5
+  // appState === 'ready' — triage session or start/completion screens
+  const hasActiveSession = sessionId !== null && sessionQueue.length > 0;
+  const showStartPrompt =
+    !hasActiveSession && !sessionListLoading && sessionQueue.length === 0;
+
+  if (showSettings) {
+    return (
+      <main className="page-main">
+        <Settings
+          onClose={() => setShowSettings(false)}
+          onSettingChange={() => {}}
+        />
+      </main>
+    );
+  }
+
+  if (showStartPrompt) {
+    return (
+      <main className="page-main">
+        <div
+          className="content-wrap"
+          style={{
+            maxWidth: '420px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem',
+          }}
+        >
+          <header style={{ textAlign: 'center' }}>
+            <h1
+              style={{
+                fontFamily: 'var(--sans)',
+                fontWeight: 600,
+                fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
+                color: 'var(--text-h)',
+                margin: 0,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              PicSift
+            </h1>
+            <p
+              style={{
+                color: 'var(--text)',
+                margin: '0.5rem 0 0 0',
+                fontSize: '0.9375rem',
+              }}
+            >
+              Ready to start
+            </p>
+          </header>
+
+          <section
+            style={{
+              padding: '1.25rem 1rem',
+              backgroundColor: 'var(--bg-elevated)',
+              borderRadius: '12px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.8125rem' }}>
+              Selected folder
+            </p>
+            <p
+              style={{
+                color: 'var(--text-h)',
+                margin: '0.25rem 0 0 0',
+                fontWeight: 600,
+                fontSize: '1rem',
+              }}
+            >
+              {selectedFolder?.name}
+            </p>
+            <p
+              style={{
+                color: 'var(--text)',
+                margin: '0.5rem 0 0 0',
+                fontSize: '0.8125rem',
+              }}
+            >
+              {selectedFolder?.image_count} images to review
+            </p>
+          </section>
+
+          {sessionListError && (
+            <p
+              style={{
+                color: 'var(--error-text)',
+                margin: 0,
+                fontSize: '0.875rem',
+              }}
+            >
+              {sessionListError}
+            </p>
+          )}
+
+          <div className="actions-row">
+            <button
+              type="button"
+              className="touch-target-inline"
+              onClick={() => void startSession()}
+              disabled={sessionListLoading}
+              style={{
+                fontSize: '0.9375rem',
+                fontWeight: 600,
+                backgroundColor: 'var(--accent)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: sessionListLoading ? 'wait' : 'pointer',
+                opacity: sessionListLoading ? 0.8 : 1,
+              }}
+            >
+              {sessionListLoading ? 'Loading…' : 'Start session'}
+            </button>
+            <button
+              type="button"
+              className="touch-target-inline"
+              onClick={handleChangeFolder}
+              style={{
+                fontSize: '0.9375rem',
+                fontWeight: 500,
+                backgroundColor: 'transparent',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              Change folder
+            </button>
+            <button
+              type="button"
+              className="touch-target-inline"
+              onClick={handleLogout}
+              style={{
+                fontSize: '0.9375rem',
+                backgroundColor: 'transparent',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (sessionListLoading && sessionQueue.length === 0) {
+    return (
+      <main className="page-main">
+        <p style={{ color: 'var(--text)', fontSize: '0.9375rem' }}>
+          Loading images…
+        </p>
+      </main>
+    );
+  }
+
+  if (isSessionComplete) {
+    return (
+      <main className="page-main">
+        <div
+          className="content-wrap"
+          style={{
+            maxWidth: '420px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem',
+          }}
+        >
+          <h1
+            style={{
+              fontFamily: 'var(--sans)',
+              fontWeight: 600,
+              fontSize: '1.5rem',
+              color: 'var(--text-h)',
+              margin: 0,
+              textAlign: 'center',
+            }}
+          >
+            Session complete
+          </h1>
+          <section
+            style={{
+              padding: '1.25rem',
+              backgroundColor: 'var(--bg-elevated)',
+              borderRadius: '12px',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.9375rem' }}>
+              Kept: <strong style={{ color: 'var(--text-h)' }}>{keptCount}</strong>
+            </p>
+            <p
+              style={{
+                color: 'var(--text)',
+                margin: '0.5rem 0 0 0',
+                fontSize: '0.9375rem',
+              }}
+            >
+              Deleted:{' '}
+              <strong style={{ color: 'var(--text-h)' }}>{trashedCount}</strong>
+            </p>
+          </section>
+          <div className="actions-row">
+            <button
+              type="button"
+              className="touch-target-inline"
+              onClick={() => {
+                setSessionId(null);
+                setSessionQueue([]);
+                setSessionIndex(0);
+                setUndoStack([]);
+                void startSession();
+              }}
+              style={{
+                fontSize: '0.9375rem',
+                fontWeight: 600,
+                backgroundColor: 'var(--accent)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              Start new session
+            </button>
+            <button
+              type="button"
+              className="touch-target-inline"
+              onClick={handleChangeFolder}
+              style={{
+                fontSize: '0.9375rem',
+                backgroundColor: 'transparent',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              Change folder
+            </button>
+            <button
+              type="button"
+              className="touch-target-inline"
+              onClick={handleLogout}
+              style={{
+                fontSize: '0.9375rem',
+                backgroundColor: 'transparent',
+                color: 'var(--text)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Active triage: Viewer + Controls + settings gear
   return (
     <main className="page-main">
       <div
         className="content-wrap"
         style={{
-          maxWidth: '420px',
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1.5rem',
+          gap: '1.25rem',
+          alignItems: 'center',
         }}
       >
-        <header style={{ textAlign: 'center' }}>
+        <header
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <h1
             style={{
               fontFamily: 'var(--sans)',
               fontWeight: 600,
-              fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
+              fontSize: '1.25rem',
               color: 'var(--text-h)',
               margin: 0,
-              letterSpacing: '-0.02em',
             }}
           >
             PicSift
           </h1>
-          <p
+          <button
+            type="button"
+            className="touch-target"
+            onClick={() => setShowSettings(true)}
             style={{
+              width: 'var(--touch-min)',
+              height: 'var(--touch-min)',
+              padding: 0,
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: 'transparent',
               color: 'var(--text)',
-              margin: '0.5rem 0 0 0',
-              fontSize: '0.9375rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
+            aria-label="Settings"
           >
-            Ready to start
-          </p>
+            <SettingsIcon sx={{ fontSize: 24 }} />
+          </button>
         </header>
 
-        <section
-          style={{
-            padding: '1.25rem 1rem',
-            backgroundColor: 'var(--bg-elevated)',
-            borderRadius: '12px',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.8125rem' }}>
-            Selected folder
-          </p>
+        <Viewer currentEntry={currentEntry} nextEntry={nextEntry} />
+
+        {actionError && (
           <p
+            role="alert"
             style={{
-              color: 'var(--text-h)',
-              margin: '0.25rem 0 0 0',
-              fontWeight: 600,
-              fontSize: '1rem',
+              margin: 0,
+              padding: '0.5rem 0.75rem',
+              fontSize: '0.875rem',
+              color: 'var(--error-text)',
+              backgroundColor: 'var(--error-bg)',
+              border: '1px solid var(--error-border)',
+              borderRadius: '8px',
+              width: '100%',
+              maxWidth: 'var(--content-max)',
+              textAlign: 'center',
             }}
           >
-            {selectedFolder?.name}
+            {actionError}
           </p>
-          <p
-            style={{
-              color: 'var(--text)',
-              margin: '0.5rem 0 0 0',
-              fontSize: '0.8125rem',
-            }}
-          >
-            {selectedFolder?.image_count} images to review
-          </p>
-        </section>
+        )}
 
-        <div
-          style={{
-            padding: '1rem',
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '10px',
-            border: '1px solid var(--border)',
-            textAlign: 'center',
-          }}
-        >
-          <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.875rem' }}>
-            Main app interface coming in Phase 5
-          </p>
-        </div>
+        <Controls
+          onKeep={onKeep}
+          onDelete={() => void onDelete()}
+          onUndo={() => void onUndo()}
+          currentPosition={sessionIndex + 1}
+          totalCount={totalCount}
+          canUndo={undoStack.length > 0}
+          isBusy={actionBusy}
+        />
 
-        <div className="actions-row">
+        <div className="actions-row" style={{ marginTop: '0.5rem' }}>
           <button
             type="button"
             className="touch-target-inline"
             onClick={handleChangeFolder}
             style={{
-              fontSize: '0.9375rem',
-              fontWeight: 500,
-              backgroundColor: 'var(--accent)',
-              color: 'white',
-              border: 'none',
+              fontSize: '0.8125rem',
+              backgroundColor: 'transparent',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
               borderRadius: '8px',
               cursor: 'pointer',
-              transition: 'background-color 0.15s ease',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--accent)';
             }}
           >
             Change folder
@@ -557,21 +1033,12 @@ export default function App() {
             className="touch-target-inline"
             onClick={handleLogout}
             style={{
-              fontSize: '0.9375rem',
+              fontSize: '0.8125rem',
               backgroundColor: 'transparent',
               color: 'var(--text)',
               border: '1px solid var(--border)',
               borderRadius: '8px',
               cursor: 'pointer',
-              transition: 'color 0.15s ease, border-color 0.15s ease',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.color = 'var(--text-h)';
-              e.currentTarget.style.borderColor = 'var(--text)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.color = 'var(--text)';
-              e.currentTarget.style.borderColor = 'var(--border)';
             }}
           >
             Logout

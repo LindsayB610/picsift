@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import FolderIcon from '@mui/icons-material/Folder';
 import { useDiscoverFolders } from '../hooks/useFolders';
 import type { FolderInfo } from '../types';
 
@@ -227,27 +228,40 @@ export default function FolderSelector({
                 gap: '0.5rem',
               }}
             >
-              <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-                <div
-                  style={{
-                    fontWeight: '600',
-                    color: 'var(--text-h)',
-                    marginBottom: '0.125rem',
-                    fontSize: '0.9375rem',
-                  }}
-                >
-                  {folder.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: '0.8125rem',
-                    color: 'var(--text)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {folder.display_path}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  minWidth: 0,
+                  flex: '1 1 auto',
+                }}
+              >
+                <FolderIcon
+                  sx={{ fontSize: 20, color: 'var(--accent)', flexShrink: 0 }}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: '600',
+                      color: 'var(--text-h)',
+                      marginBottom: '0.125rem',
+                      fontSize: '0.9375rem',
+                    }}
+                  >
+                    {folder.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.8125rem',
+                      color: 'var(--text)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {folder.display_path}
+                  </div>
                 </div>
               </div>
               <div
