@@ -20,5 +20,16 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     globals: true,
     css: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/**/*.{test,spec}.{ts,tsx}",
+        "src/test/**",
+        "src/main.tsx",
+        "src/vite-env.d.ts",
+      ],
+    },
   },
 });

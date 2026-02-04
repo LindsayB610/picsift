@@ -51,6 +51,7 @@ docs/                  # BUILD_NOTES, SETUP_GUIDE, DECISIONS, ACCESSIBILITY_TEST
 | `npm run typecheck`     | TS check app + functions                          |
 | `npm test`              | Run all Vitest tests                              |
 | `npm run test:a11y`     | Run only `src/test/a11y`                          |
+| `npm run test:coverage` | Vitest with v8 coverage report                     |
 | `npm run test:watch`    | Vitest watch mode                                 |
 | `npm run lint`          | ESLint                                            |
 | `npm run format`        | Prettier write                                    |
