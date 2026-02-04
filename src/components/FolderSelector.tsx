@@ -311,10 +311,9 @@ export default function FolderSelector({
             <div
               style={{
                 display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "space-between",
                 alignItems: "center",
                 gap: "0.5rem",
+                minHeight: 0,
               }}
             >
               <div
@@ -323,19 +322,27 @@ export default function FolderSelector({
                   alignItems: "center",
                   gap: "0.5rem",
                   minWidth: 0,
-                  flex: "1 1 auto",
+                  flex: 1,
                 }}
               >
                 <FolderIcon
                   sx={{ fontSize: 20, color: "var(--accent)", flexShrink: 0 }}
                 />
-                <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    minWidth: 0,
+                    overflow: "hidden",
+                  }}
+                >
                   <div
                     style={{
                       fontWeight: "600",
                       color: "var(--text-h)",
                       marginBottom: "0.125rem",
                       fontSize: "0.9375rem",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {folder.name}
@@ -355,7 +362,7 @@ export default function FolderSelector({
               </div>
               <div
                 style={{
-                  flex: "0 0 auto",
+                  flexShrink: 0,
                   padding: "0.25rem 0.5rem",
                   backgroundColor: "var(--bg-secondary)",
                   borderRadius: "8px",
