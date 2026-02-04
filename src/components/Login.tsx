@@ -1,10 +1,12 @@
 /**
  * Login component
  * Displays README content and "Login with Dropbox" button
+ * Phase 7: normalized error display
  */
 
 import ReactMarkdown from 'react-markdown';
 import { useStartAuth } from '../hooks/useAuth';
+import { normalizeError } from '../utils/error';
 
 const README_CONTENT = `# PicSift
 
@@ -132,6 +134,7 @@ export default function Login() {
 
         {startAuthMutation.isError && (
           <div
+            role="alert"
             style={{
               padding: '1rem',
               backgroundColor: 'var(--error-bg)',
@@ -140,9 +143,7 @@ export default function Login() {
               border: '1px solid var(--error-border)',
             }}
           >
-            {startAuthMutation.error instanceof Error
-              ? startAuthMutation.error.message
-              : 'Failed to start authentication'}
+            {normalizeError(startAuthMutation.error)}
           </div>
         )}
       </div>

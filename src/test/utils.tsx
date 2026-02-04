@@ -1,10 +1,11 @@
 /**
- * Test utilities: custom render with React Query provider for a11y and other tests
+ * Test utilities: custom render with React Query and Feedback providers for a11y and other tests
  */
 
 import { type ReactElement } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { FeedbackProvider } from "@/contexts/FeedbackContext";
 
 function createTestQueryClient(): QueryClient {
   return new QueryClient({
@@ -23,7 +24,9 @@ function AllTheProviders({ children }: AllTheProvidersProps): ReactElement {
   const client = createTestQueryClient();
   return (
     <QueryClientProvider client={client}>
-      {children}
+      <FeedbackProvider>
+        {children}
+      </FeedbackProvider>
     </QueryClientProvider>
   );
 }

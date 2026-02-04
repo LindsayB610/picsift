@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App'
+import { FeedbackProvider } from './contexts/FeedbackContext'
 
 const root = document.getElementById('root')
 if (root == null) {
@@ -24,7 +25,9 @@ const queryClient = new QueryClient({
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <FeedbackProvider>
+        <App />
+      </FeedbackProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

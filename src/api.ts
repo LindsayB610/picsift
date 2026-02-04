@@ -1,7 +1,9 @@
 /**
  * Frontend API client for Netlify Functions
+ * Phase 7: normalized errors, optional retry for transient failures.
  */
 
+import { normalizeError } from './utils/error';
 import type {
   AuthStartResponse,
   AuthCallbackResponse,
@@ -15,31 +17,78 @@ import type {
 
 const FUNCTIONS_BASE = '/.netlify/functions';
 
+/** Thrown by handleResponse; status preserved for error classification */
+export class ApiClientError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
+    super(message);
+    this.name = 'ApiClientError';
+  }
+}
+
 /**
- * Handle API errors
+ * Parse API response; throw ApiClientError with normalized message and status.
  */
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = (await response.json().catch(() => ({}))) as ApiError & { error?: string };
-    const message = error.message || error.error || `API error: ${response.status}`;
-    throw new Error(message);
+    let message: string;
+    try {
+      const body = (await response.json()) as ApiError & { error?: string };
+      message = body.message ?? body.error ?? `Request failed (${response.status})`;
+    } catch {
+      message = `Request failed (${response.status}). Please try again.`;
+    }
+    throw new ApiClientError(message, response.status);
   }
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch (err: unknown) {
+    throw new ApiClientError(normalizeError(err), response.status);
+  }
+}
+
+/** Retry once on network failure or 429/5xx */
+const RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
+
+async function fetchWithRetry(
+  url: string,
+  init?: RequestInit,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await fetch(url, init);
+      const retryable =
+        !response.ok &&
+        (RETRYABLE_STATUSES.includes(response.status) ||
+          response.status >= 500);
+      if (!retryable) return response;
+      lastErr = new ApiClientError(
+        `Request failed (${response.status}). Please try again.`,
+        response.status,
+      );
+    } catch (err: unknown) {
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 /**
  * Start OAuth flow
  */
 export async function startAuth(): Promise<AuthStartResponse> {
-  const response = await fetch(`${FUNCTIONS_BASE}/auth_start`);
+  const response = await fetchWithRetry(`${FUNCTIONS_BASE}/auth_start`);
   return handleResponse<AuthStartResponse>(response);
 }
 
 /**
  * Check auth callback (called after OAuth redirect)
+ * No retry: auth callback is one-time.
  */
 export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
-  // Get code and state from URL
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const state = params.get('state');
@@ -51,12 +100,10 @@ export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
     };
   }
 
-  // Call callback function
   const callbackUrl = `${FUNCTIONS_BASE}/auth_callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
   const response = await fetch(callbackUrl, {
-    credentials: 'include', // Include cookies
+    credentials: 'include',
   });
-
   return handleResponse<AuthCallbackResponse>(response);
 }
 
@@ -66,7 +113,7 @@ export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
 export async function discoverFolders(
   maxDepth: number = 3,
 ): Promise<DiscoverFoldersResponse> {
-  const response = await fetch(
+  const response = await fetchWithRetry(
     `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`,
   );
   return handleResponse<DiscoverFoldersResponse>(response);
@@ -82,7 +129,7 @@ export async function listImages(
     typeof pathOrPaths === 'string'
       ? JSON.stringify({ path: pathOrPaths })
       : JSON.stringify({ paths: pathOrPaths });
-  const response = await fetch(`${FUNCTIONS_BASE}/list`, {
+  const response = await fetchWithRetry(`${FUNCTIONS_BASE}/list`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body,
@@ -94,7 +141,7 @@ export async function listImages(
  * Get a temporary URL for displaying an image (expires in 4 hours)
  */
 export async function getTempLink(path: string): Promise<TempLinkResponse> {
-  const response = await fetch(`${FUNCTIONS_BASE}/temp_link`, {
+  const response = await fetchWithRetry(`${FUNCTIONS_BASE}/temp_link`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
@@ -109,7 +156,7 @@ export async function trash(
   path: string,
   sessionId: string,
 ): Promise<TrashResponse> {
-  const response = await fetch(`${FUNCTIONS_BASE}/trash`, {
+  const response = await fetchWithRetry(`${FUNCTIONS_BASE}/trash`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path, session_id: sessionId }),
@@ -124,7 +171,7 @@ export async function undo(
   trashedPath: string,
   originalPath: string,
 ): Promise<UndoResponse> {
-  const response = await fetch(`${FUNCTIONS_BASE}/undo`, {
+  const response = await fetchWithRetry(`${FUNCTIONS_BASE}/undo`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

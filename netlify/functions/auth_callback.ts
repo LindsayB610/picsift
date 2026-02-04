@@ -7,6 +7,7 @@
 import { Dropbox } from 'dropbox';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { normalizeError } from './_utils';
 
 type HandlerEvent = {
   httpMethod: string;
@@ -265,14 +266,14 @@ export const handler = async (
         console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
         console.log('='.repeat(80));
         console.log('[AUTH] ⚠️  Restart the server to load the new tokens.');
-      } catch (envError) {
+      } catch (envErr: unknown) {
         // If auto-update fails, just log the values
         console.log('='.repeat(80));
         console.log('[AUTH] ⚠️  Could not auto-update .env file. Please update manually:');
         console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
         console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
         console.log('='.repeat(80));
-        console.error('[AUTH] Error updating .env:', envError);
+        console.error('[AUTH] Error updating .env:', envErr);
       }
     }
 
@@ -293,10 +294,9 @@ export const handler = async (
         'Set-Cookie': clearCookieHeader,
       },
     };
-  } catch (error) {
-    console.error('OAuth callback error:', error);
-    const message =
-      error instanceof Error ? error.message : 'Unknown error occurred';
+  } catch (err: unknown) {
+    console.error('OAuth callback error:', err);
+    const message = normalizeError(err);
     const redirectUrl = `${getAppBaseUrl()}/?auth=error&message=${encodeURIComponent(message)}`;
     return { statusCode: 302, headers: { Location: redirectUrl } };
   }

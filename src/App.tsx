@@ -15,7 +15,19 @@ import Settings, {
   type ConfettiFrequency,
 } from './components/Settings';
 import { useAuthCallback } from './hooks/useAuth';
-import { listImages, trash as apiTrash, undo as apiUndo } from './api';
+import { useFeedback } from './contexts/FeedbackContext';
+import {
+  listImages,
+  trash as apiTrash,
+  undo as apiUndo,
+  ApiClientError,
+} from './api';
+import {
+  normalizeError,
+  getErrorCategory,
+  isRateLimitError,
+  isNetworkError,
+} from './utils/error';
 import type {
   AuthState,
   FolderInfo,
@@ -23,6 +35,9 @@ import type {
   UndoStackItem,
   PersistedSession,
 } from './types';
+
+/** Max images per session (edge case: very large folders) */
+const MAX_QUEUE_SIZE = 5000;
 
 const AUTH_STORAGE_KEY = 'picsift:auth';
 const FOLDER_PREFERENCE_KEY = 'picsift:selectedFolder';
@@ -299,6 +314,28 @@ function SetupAddTokens({
 }
 
 export default function App() {
+  const { showToast, showCriticalModal } = useFeedback();
+
+  /** Route errors: critical (auth) → modal; transient → toast with optional retry */
+  const showApiError = useCallback(
+    (err: unknown, retry?: () => void) => {
+      const message = normalizeError(err);
+      const status =
+        err instanceof ApiClientError ? err.status : undefined;
+      const category = getErrorCategory(err, { status, message });
+      if (category === 'critical') {
+        showCriticalModal(message, 'Authentication required');
+      } else {
+        const retryLabel = isRateLimitError(err)
+          ? 'Retry (rate limited)'
+          : isNetworkError(err)
+            ? 'Retry (network)'
+            : undefined;
+        showToast(message, { retry, retryLabel });
+      }
+    },
+    [showToast, showCriticalModal],
+  );
   const [appState, setAppState] = useState<AppState>('loading');
   const [, setAuthState] = useState<AuthState>({
     is_authenticated: false,
@@ -357,10 +394,33 @@ export default function App() {
         setAppState('login');
       }
     } else if (code && state && authCallbackQuery.isError) {
-      console.error('Auth callback error:', authCallbackQuery.error);
+      showCriticalModal(
+        normalizeError(authCallbackQuery.error),
+        'Authentication failed',
+      );
       setAppState('login');
     }
-  }, [code, state, authCallbackQuery.data, authCallbackQuery.isError, authCallbackQuery.error]);
+  }, [
+    code,
+    state,
+    authCallbackQuery.data,
+    authCallbackQuery.isError,
+    authCallbackQuery.error,
+    showCriticalModal,
+  ]);
+
+  // Phase 7: show critical modal when redirected with auth=error (e.g. access denied)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auth') === 'error') {
+      const message =
+        params.get('message') != null
+          ? decodeURIComponent(params.get('message') ?? '')
+          : 'Authentication failed.';
+      showCriticalModal(message, 'Authentication failed');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [showCriticalModal]);
 
   /**
    * Initialize app: check for OAuth callback, load saved auth state, check for folder preference
@@ -526,6 +586,7 @@ export default function App() {
 
   /**
    * Start a triage session: fetch images, shuffle, set session state (Phase 6: clear old session, persist full state)
+   * Phase 7: dedupe by path, cap queue size, toast on error with retry.
    */
   const startSession = useCallback(async () => {
     if (!selectedFolder) return;
@@ -534,12 +595,27 @@ export default function App() {
     setSessionListLoading(true);
     try {
       const res = await listImages(selectedFolder.path);
-      const entries = res.entries ?? [];
+      const rawEntries = res.entries ?? [];
+      // Dedupe by path (edge case: duplicate files)
+      const seen = new Set<string>();
+      const entries = rawEntries.filter((e) => {
+        const key = e.path_lower ?? e.path_display;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
       if (entries.length === 0) {
         setSessionListError('No images found in this folder.');
+        setSessionListLoading(false);
         return;
       }
-      const shuffled = shuffleArray(entries);
+      const capped = entries.length > MAX_QUEUE_SIZE ? entries.slice(0, MAX_QUEUE_SIZE) : entries;
+      if (capped.length < entries.length) {
+        showToast(
+          `Showing first ${MAX_QUEUE_SIZE} of ${entries.length} images. Start another session for the rest.`,
+        );
+      }
+      const shuffled = shuffleArray(capped);
       const id = crypto.randomUUID();
       setSessionQueue(shuffled);
       setSessionIndex(0);
@@ -547,13 +623,14 @@ export default function App() {
       setUndoStack([]);
       setSessionListLoading(false);
       saveSessionToStorage(id, selectedFolder, shuffled, 0, []);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+    } catch (err: unknown) {
+      const message = normalizeError(err);
       setSessionListError(message);
+      showApiError(err, () => void startSession());
     } finally {
       setSessionListLoading(false);
     }
-  }, [selectedFolder]);
+  }, [selectedFolder, showApiError, showToast]);
 
   const currentEntry = sessionQueue[sessionIndex] ?? null;
   const nextEntry = sessionQueue[sessionIndex + 1] ?? null;
@@ -599,10 +676,10 @@ export default function App() {
         sessionIndex + 1,
         [...undoStack, newUndoItem],
       );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+    } catch (err: unknown) {
+      const message = normalizeError(err);
       setActionError(message);
-      console.error('Trash error:', err);
+      showApiError(err, () => void onDelete());
     } finally {
       setActionBusy(false);
     }
@@ -614,6 +691,7 @@ export default function App() {
     sessionQueue,
     sessionIndex,
     undoStack,
+    showApiError,
   ]);
 
   const onUndo = useCallback(async () => {
@@ -641,10 +719,10 @@ export default function App() {
         sessionIndex,
         newUndoStack,
       );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+    } catch (err: unknown) {
+      const message = normalizeError(err);
       setActionError(message);
-      console.error('Undo error:', err);
+      showApiError(err, () => void onUndo());
     } finally {
       setActionBusy(false);
     }
@@ -655,6 +733,7 @@ export default function App() {
     selectedFolder,
     sessionQueue,
     sessionIndex,
+    showApiError,
   ]);
 
   // Clear action error after a delay so user can read it

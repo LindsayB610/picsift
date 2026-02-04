@@ -4,6 +4,7 @@
  */
 
 import { createDropboxClient } from './_dropbox';
+import { normalizeError } from './_utils';
 import type { UndoResponse } from '../../src/types';
 
 type HandlerEvent = {
@@ -95,8 +96,8 @@ export const handler = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(response),
     };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+  } catch (err: unknown) {
+    const message = normalizeError(err);
     console.error('[UNDO] Error:', message);
     const response: UndoResponse = {
       success: false,

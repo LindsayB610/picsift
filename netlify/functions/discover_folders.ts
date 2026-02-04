@@ -4,6 +4,7 @@
  */
 
 import { createDropboxClient } from './_dropbox';
+import { normalizeError } from './_utils';
 import type { FolderInfo } from '../../src/types';
 
 type HandlerEvent = {
@@ -104,16 +105,15 @@ async function discoverFoldersRecursive(
               path: path || '', // Ensure empty string for root
               recursive: false,
             });
-      } catch (listError) {
-        const errorMsg =
-          listError instanceof Error ? listError.message : String(listError);
+      } catch (listErr: unknown) {
+        const errorMsg = normalizeError(listErr);
         console.error(
           `[DISCOVER] Error listing folder "${path}": ${errorMsg}`,
         );
         
         // Extract DropboxResponseError details
-        if (listError && typeof listError === 'object') {
-          const err = listError as Record<string, unknown>;
+        if (listErr != null && typeof listErr === 'object') {
+          const err = listErr as Record<string, unknown>;
           if ('error' in err) {
             console.error('[DISCOVER] Dropbox error:', err.error);
           }
@@ -124,7 +124,7 @@ async function discoverFoldersRecursive(
             console.error('[DISCOVER] Response headers:', err.headers);
           }
         }
-        throw listError;
+        throw listErr;
       }
 
       const entries = result.result.entries;
@@ -180,16 +180,15 @@ async function discoverFoldersRecursive(
       hasMore = result.result.has_more;
       cursor = result.result.cursor;
     }
-  } catch (error) {
+  } catch (err: unknown) {
     // Some folders may not be accessible, skip them
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = normalizeError(err);
     console.error(
       `[DISCOVER] Error scanning folder "${path}": ${errorMessage}`,
     );
     // Re-throw if it's the root folder (we need to know about root errors)
     if (path === '' || path === '/') {
-      throw error;
+      throw err;
     }
   }
 
@@ -247,7 +246,7 @@ export const handler = async (
       
       // If root works, discover from root
       folders = await discoverFoldersRecursive(rootPath, dbx, maxDepth);
-    } catch (rootError) {
+    } catch (rootError: unknown) {
       console.error('[DISCOVER] Root folder access failed, trying alternative paths...');
       
       // Try common folder paths as fallback
@@ -265,9 +264,8 @@ export const handler = async (
           folders = await discoverFoldersRecursive(rootPath, dbx, maxDepth);
           foundPath = true;
           break;
-        } catch (pathError) {
-          const pathErrorMsg =
-            pathError instanceof Error ? pathError.message : String(pathError);
+        } catch (pathErr: unknown) {
+          const pathErrorMsg = normalizeError(pathErr);
           console.warn(`[DISCOVER] Path "${testPath}" failed: ${pathErrorMsg}`);
           // Continue to next path
         }
@@ -275,8 +273,7 @@ export const handler = async (
       
       if (!foundPath) {
         // If all paths failed, throw the original root error with details
-        const errorDetails =
-          rootError instanceof Error ? rootError.message : String(rootError);
+        const errorDetails = normalizeError(rootError);
         console.error(`[DISCOVER] All paths failed. Original error: ${errorDetails}`);
         
         // Try to extract Dropbox error details
@@ -323,33 +320,37 @@ export const handler = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(result),
     };
-  } catch (error) {
-    console.error('[DISCOVER] Folder discovery error:', error);
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
-    const errorStack =
-      error instanceof Error ? error.stack : undefined;
+  } catch (err: unknown) {
+    console.error('[DISCOVER] Folder discovery error:', err);
+    const errorMessage = normalizeError(err);
+    const errorStack = err instanceof Error ? err.stack : undefined;
     
     // Extract Dropbox error details if available
     let dropboxError: string | undefined;
     let httpStatus: number | undefined;
-    if (error && typeof error === 'object') {
-      const err = error as Record<string, unknown>;
-      httpStatus = typeof err.status === 'number' ? err.status : undefined;
-      
+    if (err != null && typeof err === 'object') {
+      const errObj = err as Record<string, unknown>;
+      httpStatus = typeof errObj.status === 'number' ? errObj.status : undefined;
+
       // Properly serialize the error field
-      if ('error' in err) {
-        if (typeof err.error === 'string') {
-          dropboxError = err.error;
-        } else if (err.error && typeof err.error === 'object') {
+      if ('error' in errObj) {
+        if (typeof errObj.error === 'string') {
+          dropboxError = errObj.error;
+        } else if (errObj.error != null && typeof errObj.error === 'object') {
           // If it's an object, try to extract a message or stringify it
-          const errorObj = err.error as Record<string, unknown>;
-          if ('error_summary' in errorObj && typeof errorObj.error_summary === 'string') {
+          const errorObj = errObj.error as Record<string, unknown>;
+          if (
+            'error_summary' in errorObj &&
+            typeof errorObj.error_summary === 'string'
+          ) {
             dropboxError = errorObj.error_summary;
-          } else if ('error' in errorObj && typeof errorObj.error === 'string') {
+          } else if (
+            'error' in errorObj &&
+            typeof errorObj.error === 'string'
+          ) {
             dropboxError = errorObj.error;
           } else {
-            dropboxError = JSON.stringify(err.error);
+            dropboxError = JSON.stringify(errObj.error);
           }
         }
       }

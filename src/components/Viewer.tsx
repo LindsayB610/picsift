@@ -1,9 +1,11 @@
 /**
  * Image viewer: displays current image, preloads next, handles loading and error states
+ * Phase 7: normalized error display
  */
 
 import { useEffect, useState } from 'react';
 import { useTempLink } from '../hooks/useTempLink';
+import { normalizeError } from '../utils/error';
 import type { DbxEntry } from '../types';
 
 export interface ViewerProps {
@@ -117,7 +119,7 @@ export default function Viewer({
         >
           Failed to load image
         </p>
-        {(currentErrorDetail || imageLoadError) && (
+        {(currentErrorDetail != null || imageLoadError) && (
           <p
             style={{
               color: 'var(--text)',
@@ -126,11 +128,11 @@ export default function Viewer({
               textAlign: 'center',
             }}
           >
-            {currentErrorDetail instanceof Error
-              ? currentErrorDetail.message
-              : imageLoadError
-                ? 'Image could not be displayed'
-                : String(currentErrorDetail ?? '')}
+            {imageLoadError
+              ? 'Image could not be displayed'
+              : currentErrorDetail != null
+                ? normalizeError(currentErrorDetail)
+                : ''}
           </p>
         )}
       </div>

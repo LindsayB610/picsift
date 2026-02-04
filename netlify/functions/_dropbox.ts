@@ -220,17 +220,17 @@ export async function dbxCall<T>(
     const dbx = await createDropboxClient();
     const response = await apiCall(dbx);
     return response.result;
-  } catch (error) {
+  } catch (err: unknown) {
     // Log the full error for debugging
-    console.error('[DROPBOX] API call error:', error);
-    if (error instanceof Error) {
-      console.error('[DROPBOX] Error message:', error.message);
-      console.error('[DROPBOX] Error stack:', error.stack);
+    console.error('[DROPBOX] API call error:', err);
+    if (err instanceof Error) {
+      console.error('[DROPBOX] Error message:', err.message);
+      console.error('[DROPBOX] Error stack:', err.stack);
     }
-    
+
     // Try to extract Dropbox-specific error details
-    if (error && typeof error === 'object') {
-      const errorObj = error as Record<string, unknown>;
+    if (err != null && typeof err === 'object') {
+      const errorObj = err as Record<string, unknown>;
       if ('error' in errorObj) {
         console.error('[DROPBOX] Dropbox error field:', errorObj.error);
       }
@@ -250,12 +250,12 @@ export async function dbxCall<T>(
     }
 
     // Handle token errors
+    const errMessage = err instanceof Error ? err.message : String(err);
     if (
-      error instanceof Error &&
-      (error.message.includes('expired') ||
-        error.message.includes('invalid_token') ||
-        error.message.includes('401') ||
-        error.message.includes('400'))
+      errMessage.includes('expired') ||
+      errMessage.includes('invalid_token') ||
+      errMessage.includes('401') ||
+      errMessage.includes('400')
     ) {
       // Clear cache and retry once
       console.log('[DROPBOX] Token error detected, clearing cache and retrying...');
@@ -264,7 +264,7 @@ export async function dbxCall<T>(
       const response = await apiCall(dbx);
       return response.result;
     }
-    throw error;
+    throw err;
   }
 }
 

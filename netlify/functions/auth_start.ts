@@ -4,6 +4,7 @@
  */
 
 import { randomBytes } from 'crypto';
+import { normalizeError } from './_utils';
 
 type HandlerEvent = {
   httpMethod: string;
@@ -99,14 +100,14 @@ export const handler = async (
         state: state, // Also return in body for client-side storage as backup
       }),
     };
-  } catch (error) {
-    console.error('OAuth start error:', error);
+  } catch (err: unknown) {
+    console.error('OAuth start error:', err);
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         error: 'Failed to initiate OAuth flow',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: normalizeError(err),
       }),
     };
   }

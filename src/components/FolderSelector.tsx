@@ -1,11 +1,15 @@
 /**
  * Folder selector component
  * Displays discovered folders and allows user to select one
+ * Phase 7: normalized error display
  */
 
 import { useState, useEffect, useMemo } from 'react';
 import FolderIcon from '@mui/icons-material/Folder';
 import { useDiscoverFolders } from '../hooks/useFolders';
+import { useFeedback } from '../contexts/FeedbackContext';
+import { normalizeError, getErrorCategory } from '../utils/error';
+import { ApiClientError } from '../api';
 import type { FolderInfo } from '../types';
 
 const FOLDER_PREFERENCE_KEY = 'picsift:selectedFolder';
@@ -19,8 +23,9 @@ export default function FolderSelector({
   onFolderSelected,
   onCancel,
 }: FolderSelectorProps) {
+  const { showCriticalModal } = useFeedback();
   const [selectedFolder, setSelectedFolder] = useState<FolderInfo | null>(null);
-  
+
   // Use React Query to fetch folders
   const {
     data: foldersData,
@@ -30,11 +35,25 @@ export default function FolderSelector({
   } = useDiscoverFolders(3);
 
   const folders = useMemo(() => foldersData?.folders ?? [], [foldersData?.folders]);
-  const error = queryError
-    ? queryError instanceof Error
-      ? queryError.message
-      : 'Failed to discover folders'
-    : null;
+  const error = queryError != null ? normalizeError(queryError) : null;
+  const isCriticalError =
+    queryError != null &&
+    getErrorCategory(queryError, {
+      status:
+        queryError instanceof ApiClientError ? queryError.status : undefined,
+      message: error ?? undefined,
+    }) === 'critical';
+
+  // Show critical (auth) errors in modal; on dismiss, redirect to login
+  useEffect(() => {
+    if (isCriticalError && queryError && onCancel) {
+      showCriticalModal(
+        normalizeError(queryError),
+        'Authentication required',
+        onCancel,
+      );
+    }
+  }, [isCriticalError, queryError, showCriticalModal, onCancel]);
 
   // Check for saved preference when folders load
   useEffect(() => {
@@ -70,6 +89,16 @@ export default function FolderSelector({
     }
   };
 
+  if (isCriticalError) {
+    return (
+      <div className="content-wrap" style={{ width: '100%', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text)', margin: 0 }}>
+          Authentication required. Please log in again.
+        </p>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="content-wrap" style={{ width: '100%', textAlign: 'center' }}>
@@ -78,8 +107,8 @@ export default function FolderSelector({
     );
   }
 
-  if (error) {
-    const needsRefreshToken = typeof error === 'string' && error.includes('DROPBOX_REFRESH_TOKEN');
+  if (error && !isCriticalError) {
+    const needsRefreshToken = error.includes('DROPBOX_REFRESH_TOKEN');
     return (
       <div className="content-wrap" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div
