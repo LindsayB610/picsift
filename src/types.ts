@@ -55,6 +55,26 @@ export interface SessionState {
 }
 
 /**
+ * One undo stack item: trash record from API + entry for re-inserting into queue
+ */
+export interface UndoStackItem {
+  record: TrashRecord;
+  entry: DbxEntry;
+}
+
+/**
+ * Persisted session state (localStorage) for Phase 6: restore on reload
+ */
+export interface PersistedSession {
+  sessionId: string;
+  folder: FolderInfo;
+  queue: DbxEntry[];
+  index: number;
+  undoStack: UndoStackItem[];
+  savedAt: string; // ISO timestamp
+}
+
+/**
  * Folder information for selection
  */
 export interface FolderInfo {

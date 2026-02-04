@@ -16,16 +16,21 @@ import Settings, {
 } from './components/Settings';
 import { useAuthCallback } from './hooks/useAuth';
 import { listImages, trash as apiTrash, undo as apiUndo } from './api';
-import type { AuthState, FolderInfo, DbxEntry, TrashRecord } from './types';
+import type {
+  AuthState,
+  FolderInfo,
+  DbxEntry,
+  UndoStackItem,
+  PersistedSession,
+} from './types';
 
 const AUTH_STORAGE_KEY = 'picsift:auth';
 const FOLDER_PREFERENCE_KEY = 'picsift:selectedFolder';
 const SESSION_PERSIST_KEY = 'picsift:session';
+/** Sessions older than this are not offered for resume (Phase 6) */
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 type AppState = 'loading' | 'login' | 'setup' | 'folder-selection' | 'ready';
-
-/** Undo stack item: record from API + entry for re-inserting into queue */
-type UndoItem = { record: TrashRecord; entry: DbxEntry };
 
 function shuffleArray<T>(array: T[]): T[] {
   const out = [...array];
@@ -46,6 +51,69 @@ function maybeConfetti(trashedCount: number, frequency: ConfettiFrequency): void
     spread: 70,
     origin: { y: 0.6 },
   });
+}
+
+function saveSessionToStorage(
+  sessionId: string,
+  folder: FolderInfo,
+  queue: DbxEntry[],
+  index: number,
+  undoStack: UndoStackItem[],
+): void {
+  try {
+    const payload: PersistedSession = {
+      sessionId,
+      folder,
+      queue,
+      index,
+      undoStack,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(SESSION_PERSIST_KEY, JSON.stringify(payload));
+  } catch {
+    // quota or other; session continues in memory
+  }
+}
+
+function loadSessionFromStorage(): PersistedSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_PERSIST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedSession;
+    const folder = parsed.folder;
+    if (
+      !parsed.sessionId ||
+      !Array.isArray(parsed.queue) ||
+      typeof parsed.index !== 'number' ||
+      !Array.isArray(parsed.undoStack) ||
+      !parsed.savedAt ||
+      !folder ||
+      typeof folder.path !== 'string' ||
+      !folder.path ||
+      typeof folder.name !== 'string' ||
+      typeof folder.image_count !== 'number' ||
+      typeof folder.display_path !== 'string'
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearPersistedSession(): void {
+  try {
+    localStorage.removeItem(SESSION_PERSIST_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** True if persisted session is within expiry window and can be resumed */
+function isSessionResumable(parsed: PersistedSession): boolean {
+  const savedAt = new Date(parsed.savedAt).getTime();
+  return Number.isFinite(savedAt) && Date.now() - savedAt < SESSION_EXPIRY_MS;
 }
 
 const SETUP_TOKENS_KEY = 'picsift:setup_tokens';
@@ -244,7 +312,7 @@ export default function App() {
   const [sessionQueue, setSessionQueue] = useState<DbxEntry[]>([]);
   const [sessionIndex, setSessionIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [undoStack, setUndoStack] = useState<UndoItem[]>([]);
+  const [undoStack, setUndoStack] = useState<UndoStackItem[]>([]);
   const [sessionListLoading, setSessionListLoading] = useState(false);
   const [sessionListError, setSessionListError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -427,6 +495,13 @@ export default function App() {
    * Handle folder selection
    */
   const handleFolderSelected = (folder: FolderInfo) => {
+    if (folder.path !== selectedFolder?.path) {
+      clearPersistedSession();
+      setSessionId(null);
+      setSessionQueue([]);
+      setSessionIndex(0);
+      setUndoStack([]);
+    }
     setSelectedFolder(folder);
     setAppState('ready');
   };
@@ -450,10 +525,11 @@ export default function App() {
   };
 
   /**
-   * Start a triage session: fetch images, shuffle, set session state
+   * Start a triage session: fetch images, shuffle, set session state (Phase 6: clear old session, persist full state)
    */
   const startSession = useCallback(async () => {
     if (!selectedFolder) return;
+    clearPersistedSession();
     setSessionListError(null);
     setSessionListLoading(true);
     try {
@@ -470,14 +546,7 @@ export default function App() {
       setSessionId(id);
       setUndoStack([]);
       setSessionListLoading(false);
-      try {
-        localStorage.setItem(
-          SESSION_PERSIST_KEY,
-          JSON.stringify({ sessionId: id, index: 0, total: shuffled.length }),
-        );
-      } catch {
-        // ignore persist errors
-      }
+      saveSessionToStorage(id, selectedFolder, shuffled, 0, []);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setSessionListError(message);
@@ -494,26 +563,23 @@ export default function App() {
   const isSessionComplete = totalCount > 0 && sessionIndex >= totalCount;
 
   const onKeep = useCallback(() => {
-    if (actionBusy || !currentEntry) return;
+    if (actionBusy || !currentEntry || !selectedFolder || !sessionId) return;
     setActionError(null);
     const next = sessionIndex + 1;
     setSessionIndex(next);
-    try {
-      localStorage.setItem(
-        SESSION_PERSIST_KEY,
-        JSON.stringify({
-          sessionId,
-          index: next,
-          total: totalCount,
-        }),
-      );
-    } catch {
-      // ignore
-    }
-  }, [actionBusy, currentEntry, sessionIndex, sessionId, totalCount]);
+    saveSessionToStorage(sessionId, selectedFolder, sessionQueue, next, undoStack);
+  }, [
+    actionBusy,
+    currentEntry,
+    selectedFolder,
+    sessionIndex,
+    sessionId,
+    sessionQueue,
+    undoStack,
+  ]);
 
   const onDelete = useCallback(async () => {
-    if (actionBusy || !currentEntry || !sessionId) return;
+    if (actionBusy || !currentEntry || !sessionId || !selectedFolder) return;
     setActionError(null);
     setActionBusy(true);
     try {
@@ -522,21 +588,17 @@ export default function App() {
         throw new Error(result.error ?? 'Delete failed');
       }
       const record = result.trash_record;
-      setUndoStack((prev) => [...prev, { record, entry: currentEntry }]);
+      const newUndoItem: UndoStackItem = { record, entry: currentEntry };
+      setUndoStack((prev) => [...prev, newUndoItem]);
       setSessionIndex((i) => i + 1);
       maybeConfetti(undoStack.length + 1, getConfettiFrequency());
-      try {
-        localStorage.setItem(
-          SESSION_PERSIST_KEY,
-          JSON.stringify({
-            sessionId,
-            index: sessionIndex + 1,
-            total: totalCount,
-          }),
-        );
-      } catch {
-        // ignore
-      }
+      saveSessionToStorage(
+        sessionId,
+        selectedFolder,
+        sessionQueue,
+        sessionIndex + 1,
+        [...undoStack, newUndoItem],
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setActionError(message);
@@ -548,14 +610,15 @@ export default function App() {
     actionBusy,
     currentEntry,
     sessionId,
+    selectedFolder,
+    sessionQueue,
     sessionIndex,
-    totalCount,
-    undoStack.length,
+    undoStack,
   ]);
 
   const onUndo = useCallback(async () => {
     const item = undoStack[undoStack.length - 1];
-    if (actionBusy || !item || !sessionId) return;
+    if (actionBusy || !item || !sessionId || !selectedFolder) return;
     setActionError(null);
     setActionBusy(true);
     try {
@@ -566,13 +629,18 @@ export default function App() {
       if (!result.success) {
         throw new Error(result.error ?? 'Undo failed');
       }
-      setUndoStack((prev) => prev.slice(0, -1));
-      setSessionQueue((q) => {
-        const next = [...q];
-        next.splice(sessionIndex, 0, item.entry);
-        return next;
-      });
-      // Stay at same index so current image is the restored one
+      const newUndoStack = undoStack.slice(0, -1);
+      const newQueue = [...sessionQueue];
+      newQueue.splice(sessionIndex, 0, item.entry);
+      setUndoStack(newUndoStack);
+      setSessionQueue(newQueue);
+      saveSessionToStorage(
+        sessionId,
+        selectedFolder,
+        newQueue,
+        sessionIndex,
+        newUndoStack,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setActionError(message);
@@ -580,7 +648,14 @@ export default function App() {
     } finally {
       setActionBusy(false);
     }
-  }, [actionBusy, undoStack, sessionId, sessionIndex]);
+  }, [
+    actionBusy,
+    undoStack,
+    sessionId,
+    selectedFolder,
+    sessionQueue,
+    sessionIndex,
+  ]);
 
   // Clear action error after a delay so user can read it
   useEffect(() => {
@@ -616,6 +691,44 @@ export default function App() {
     onDelete,
     onUndo,
   ]);
+
+  // Phase 6: clear persisted session when session completes so reload doesn't offer resume
+  useEffect(() => {
+    if (isSessionComplete) {
+      clearPersistedSession();
+    }
+  }, [isSessionComplete]);
+
+  // Phase 6: clear expired or wrong-folder session when on start prompt (handle expired sessions gracefully)
+  useEffect(() => {
+    if (appState !== 'ready' || !selectedFolder) return;
+    const saved = loadSessionFromStorage();
+    if (!saved) return;
+    const sameFolder = saved.folder.path === selectedFolder.path;
+    const resumable = isSessionResumable(saved);
+    if (!sameFolder || !resumable) {
+      clearPersistedSession();
+    }
+  // Intentionally depend on path only so we don't re-run when FolderInfo reference changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appState, selectedFolder?.path]);
+
+  /** Restore session from localStorage (Phase 6) */
+  const resumeSession = useCallback(() => {
+    const saved = loadSessionFromStorage();
+    if (
+      !saved ||
+      !selectedFolder ||
+      saved.folder.path !== selectedFolder.path ||
+      !isSessionResumable(saved)
+    ) {
+      return;
+    }
+    setSessionId(saved.sessionId);
+    setSessionQueue(saved.queue);
+    setSessionIndex(saved.index);
+    setUndoStack(saved.undoStack);
+  }, [selectedFolder]);
 
   if (appState === 'loading') {
     return (
@@ -662,6 +775,16 @@ export default function App() {
   const hasActiveSession = sessionId !== null && sessionQueue.length > 0;
   const showStartPrompt =
     !hasActiveSession && !sessionListLoading && sessionQueue.length === 0;
+
+  // Phase 6: offer resume if we have a resumable persisted session for this folder (computed for UI only)
+  const persistedSession =
+    showStartPrompt && selectedFolder
+      ? loadSessionFromStorage()
+      : null;
+  const canResume =
+    persistedSession != null &&
+    persistedSession.folder.path === selectedFolder?.path &&
+    isSessionResumable(persistedSession);
 
   if (showSettings) {
     return (
@@ -754,24 +877,57 @@ export default function App() {
             </p>
           )}
 
+          {canResume && (
+            <p
+              style={{
+                color: 'var(--text)',
+                margin: 0,
+                fontSize: '0.8125rem',
+              }}
+            >
+              You have a session in progress. Resume or start fresh.
+            </p>
+          )}
+
           <div className="actions-row">
+            {canResume && (
+              <button
+                type="button"
+                className="touch-target-inline"
+                onClick={resumeSession}
+                style={{
+                  fontSize: '0.9375rem',
+                  fontWeight: 600,
+                  backgroundColor: 'var(--accent)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Resume session
+              </button>
+            )}
             <button
               type="button"
               className="touch-target-inline"
-              onClick={() => void startSession()}
+              onClick={() => {
+                if (canResume) clearPersistedSession();
+                void startSession();
+              }}
               disabled={sessionListLoading}
               style={{
                 fontSize: '0.9375rem',
                 fontWeight: 600,
-                backgroundColor: 'var(--accent)',
-                color: 'white',
-                border: 'none',
+                backgroundColor: canResume ? 'var(--bg-elevated)' : 'var(--accent)',
+                color: canResume ? 'var(--text-h)' : 'white',
+                border: canResume ? '1px solid var(--border)' : 'none',
                 borderRadius: '8px',
                 cursor: sessionListLoading ? 'wait' : 'pointer',
                 opacity: sessionListLoading ? 0.8 : 1,
               }}
             >
-              {sessionListLoading ? 'Loading…' : 'Start session'}
+              {sessionListLoading ? 'Loading…' : canResume ? 'Start new session' : 'Start session'}
             </button>
             <button
               type="button"
