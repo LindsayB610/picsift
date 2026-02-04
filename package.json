@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:functions": "netlify dev",
     "build": "npm run build:functions && vite build",
-    "build:functions": "tsc -p tsconfig.functions.json",
+    "build:functions": "tsc --noEmit -p tsconfig.functions.json",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.functions.json",
     "test": "vitest run",

@@ -49,15 +49,14 @@ function createMockDbx(
 }
 
 function mkEvent(
-  overrides: Partial<{ httpMethod: string; queryStringParameters?: Record<string, string> }> = {}
+  overrides: Partial<{ httpMethod: string; queryStringParameters: Record<string, string> }> = {}
 ) {
-  return {
-    httpMethod: "GET",
+  const base = {
+    httpMethod: "GET" as const,
     path: "/",
-    headers: {},
-    queryStringParameters: undefined,
-    ...overrides,
+    headers: {} as const,
   };
+  return { ...base, ...overrides };
 }
 
 describe("discover_folders handler", () => {
