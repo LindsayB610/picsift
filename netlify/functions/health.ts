@@ -15,7 +15,7 @@ type HandlerResponse = {
 };
 
 export const handler = async (
-  _event: HandlerEvent,
+  _event: HandlerEvent
 ): Promise<HandlerResponse> => {
   await Promise.resolve();
   return {

@@ -19,9 +19,11 @@ Since this is a **public repository**, we must ensure:
 ## Implementation Phases
 
 ### Phase 1: Project Setup & Configuration
+
 **Goal**: Initialize the project structure and development environment
 
 #### Tasks:
+
 1. **Initialize Vite + React + TypeScript project**
    - `npm create vite@latest . -- --template react-ts`
    - Install dependencies
@@ -75,6 +77,7 @@ Since this is a **public repository**, we must ensure:
    - Add npm scripts: `typecheck`, `lint`, `lint:fix`
 
 **Deliverables:**
+
 - Working Vite dev server
 - Netlify Functions structure
 - Environment variable template
@@ -86,9 +89,11 @@ Since this is a **public repository**, we must ensure:
 ---
 
 ### Phase 2: Dropbox OAuth Implementation
+
 **Goal**: Secure authentication flow with Dropbox
 
 #### Tasks:
+
 1. **Create Dropbox app** (manual step)
    - Register app in Dropbox App Console
    - Configure OAuth redirect URI: `https://picsift.lindsaybrunner.com/auth/callback`
@@ -151,6 +156,7 @@ Since this is a **public repository**, we must ensure:
    - Allow user to change folder (start new session with different folder)
 
 **Security considerations:**
+
 - App Key/Secret: Netlify env vars only (`DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`)
 - Refresh token: Store in Netlify env var or encrypted Netlify KV/Blob store
 - State parameter: Use crypto-secure random string, validate on callback
@@ -158,6 +164,7 @@ Since this is a **public repository**, we must ensure:
 - **User access control**: Only authorized user can authenticate (see User Management section)
 
 **Deliverables:**
+
 - Login page with README display
 - Working OAuth flow
 - Secure token storage
@@ -174,6 +181,7 @@ Since this is a **public repository**, we must ensure:
 **Goal**: Allow users to discover and select which Dropbox folder(s) to use for triage
 
 #### Tasks:
+
 1. **Folder discovery function** (`netlify/functions/discover_folders.ts`)
    - Recursively scan Dropbox folders (max depth: 3-4 levels)
    - Identify folders containing image files
@@ -210,11 +218,13 @@ Since this is a **public repository**, we must ensure:
    - Default to saved preference or "/Camera Uploads" if none
 
 **MVP Decision**: Single folder selection (one at a time)
+
 - User selects one folder per session
 - Can change folder for next session
 - Future: Support multiple folders combined into one queue
 
 **Deliverables:**
+
 - Folder discovery function
 - Folder selector UI component
 - Folder preference persistence
@@ -262,6 +272,7 @@ Since this is a **public repository**, we must ensure:
    - Do not expose which user attempted access (security best practice)
 
 #### Security Notes:
+
 - Account ID is preferred over email (more stable, less privacy-sensitive)
 - The authorized account ID/email is stored in Netlify env vars (not in code)
 - Access control happens server-side only (never exposed to browser)
@@ -273,9 +284,11 @@ Since this is a **public repository**, we must ensure:
 ---
 
 ### Phase 3: Core Dropbox API Functions
+
 **Goal**: Server-side functions to interact with Dropbox API
 
 #### Tasks:
+
 1. **Shared Dropbox helper** (`netlify/functions/_dropbox.ts`)
    - Generic `dbx()` function for API calls
    - **Token validation before each API call**:
@@ -320,6 +333,7 @@ Since this is a **public repository**, we must ensure:
    - Type definitions matching function responses
 
 **Security considerations:**
+
 - All Dropbox API calls happen server-side
 - Access tokens never exposed to browser
 - **Token-to-user validation**: Every API call validates tokens belong to authorized user
@@ -328,6 +342,7 @@ Since this is a **public repository**, we must ensure:
 - Account ID validation prevents unauthorized access even if tokens are compromised
 
 **Deliverables:**
+
 - All Netlify Functions implemented
 - Frontend API client
 - Type-safe interfaces
@@ -335,9 +350,11 @@ Since this is a **public repository**, we must ensure:
 ---
 
 ### Phase 4: TypeScript Types & Models
+
 **Goal**: Define all TypeScript interfaces and types
 
 #### Tasks:
+
 1. **Create `src/types.ts`**
    - `DbxEntry` type (matches Dropbox file metadata)
    - `TrashRecord` type
@@ -355,6 +372,7 @@ Since this is a **public repository**, we must ensure:
    - All promises are handled (no floating promises)
 
 **Deliverables:**
+
 - Complete type definitions
 - Type-safe codebase
 - All code patterns align with TypeScript Standards
@@ -363,9 +381,11 @@ Since this is a **public repository**, we must ensure:
 ---
 
 ### Phase 5: Frontend Core Components
+
 **Goal**: Build the main UI components
 
 #### Tasks:
+
 1. **App component** (`src/App.tsx`)
    - Main app structure
    - Auth state management
@@ -424,6 +444,7 @@ Since this is a **public repository**, we must ensure:
    - Confetti celebration (configurable via settings)
 
 **Deliverables:**
+
 - Login page with README display
 - Working UI with image viewer (large centered view)
 - Functional keep/delete/undo actions
@@ -435,9 +456,11 @@ Since this is a **public repository**, we must ensure:
 ---
 
 ### Phase 6: Session Management & State Persistence
+
 **Goal**: Handle session lifecycle and optional state persistence
 
 #### Tasks:
+
 1. **Session initialization**
    - Check for saved folder preference or use selected folder
    - Fetch image list from Dropbox (from selected folder path)
@@ -456,6 +479,7 @@ Since this is a **public repository**, we must ensure:
    - Option to start new session
 
 **Deliverables:**
+
 - Complete session flow
 - Optional state persistence
 - Session summary
@@ -463,9 +487,11 @@ Since this is a **public repository**, we must ensure:
 ---
 
 ### Phase 7: Error Handling & Edge Cases
+
 **Goal**: Robust error handling and user feedback
 
 #### Tasks:
+
 1. **Error handling** (per TypeScript Standards)
    - All catch blocks use `unknown` type
    - Proper error normalization utilities
@@ -491,6 +517,7 @@ Since this is a **public repository**, we must ensure:
    - Retry mechanisms (auto-retry once, then manual retry button)
 
 **Deliverables:**
+
 - Comprehensive error handling
 - User-friendly error messages
 - Graceful degradation
@@ -498,9 +525,11 @@ Since this is a **public repository**, we must ensure:
 ---
 
 ### Phase 8: Testing & Polish
+
 **Goal**: Test the complete flow and polish the experience
 
 #### Tasks:
+
 1. **Type checking and linting** (per TypeScript Standards)
    - Run `npm run typecheck` - must pass with zero errors
    - Run `npm run lint` - must pass with zero errors
@@ -532,24 +561,25 @@ Since this is a **public repository**, we must ensure:
    - Session completion
    - Error scenarios
 
-4. **UI/UX polish**
+5. **UI/UX polish**
    - Smooth transitions
    - Loading states
    - Keyboard shortcuts work reliably
    - Mobile responsiveness (if needed)
    - Accessibility basics
 
-5. **Performance**
+6. **Performance**
    - Image loading optimization
    - Function response times
    - Client-side shuffling performance
 
-6. **Documentation**
+7. **Documentation**
    - README with setup instructions
    - Environment variables documentation
    - Deployment guide
 
 **Deliverables:**
+
 - Type checking passes with zero errors
 - Linting passes with zero errors
 - Security testing completed (token validation, unauthorized access rejection)
@@ -558,12 +588,23 @@ Since this is a **public repository**, we must ensure:
 - Documentation
 - Code aligns with TypeScript Standards
 
+**Phase 8 implementation notes:**
+
+- Typecheck and lint: run `npm run typecheck` and `npm run lint` (must pass).
+- Security testing: see [docs/TESTING_AND_POLISH.md](TESTING_AND_POLISH.md) for checklist (unauthorized user, token validation).
+- Test data: use a dedicated Dropbox folder (e.g. `/PicSift Test`); see TESTING_AND_POLISH.md.
+- Manual testing: full checklist in TESTING_AND_POLISH.md (OAuth, list, keep/delete, undo, completion, errors).
+- UI/UX: smooth viewer image transition, focus styles for a11y, loading states (see `src/index.css` and Viewer).
+- Documentation: [docs/DEPLOYMENT.md](DEPLOYMENT.md) (deploy + env), [docs/TESTING_AND_POLISH.md](TESTING_AND_POLISH.md) (Phase 8 checklist), README links to both.
+
 ---
 
 ### Phase 9: Deployment
+
 **Goal**: Deploy to Netlify
 
 #### Tasks:
+
 1. **Netlify setup**
    - Connect GitHub repository
    - Configure build settings
@@ -583,6 +624,7 @@ Since this is a **public repository**, we must ensure:
    - Verify security (no tokens in browser)
 
 **Deliverables:**
+
 - Live application on Netlify
 - Working OAuth
 - Secure deployment
@@ -625,6 +667,7 @@ AUTHORIZED_DROPBOX_EMAIL=your-email@example.com  # Alternative: use email instea
 ```
 
 ### Optional:
+
 ```
 DROPBOX_SOURCE_PATH=/Camera Uploads  # Default if not set
 NETLIFY_URL=https://picsift.lindsaybrunner.com  # For OAuth redirect

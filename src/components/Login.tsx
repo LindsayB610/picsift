@@ -4,9 +4,9 @@
  * Phase 7: normalized error display
  */
 
-import ReactMarkdown from 'react-markdown';
-import { useStartAuth } from '../hooks/useAuth';
-import { normalizeError } from '../utils/error';
+import ReactMarkdown from "react-markdown";
+import { useStartAuth } from "../hooks/useAuth";
+import { normalizeError } from "../utils/error";
 
 const README_CONTENT = `# PicSift
 
@@ -87,60 +87,60 @@ export default function Login() {
     <div
       className="content-wrap"
       style={{
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem',
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        gap: "1.5rem",
       }}
     >
       <div
         className="markdown-content"
         style={{
-          backgroundColor: 'var(--bg-secondary)',
-          padding: '1.25rem 1rem',
-          borderRadius: '12px',
-          lineHeight: '1.6',
-          border: '1px solid var(--border)',
-          maxHeight: '60vh',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
+          backgroundColor: "var(--bg-secondary)",
+          padding: "1.25rem 1rem",
+          borderRadius: "12px",
+          lineHeight: "1.6",
+          border: "1px solid var(--border)",
+          maxHeight: "60vh",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         <ReactMarkdown>{README_CONTENT}</ReactMarkdown>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <button
           type="button"
           className="touch-target-inline"
           onClick={handleLogin}
           disabled={startAuthMutation.isPending}
           style={{
-            width: '100%',
-            padding: '0.875rem 1.5rem',
-            fontSize: '1rem',
-            fontWeight: '600',
-            backgroundColor: 'var(--accent)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: startAuthMutation.isPending ? 'not-allowed' : 'pointer',
+            width: "100%",
+            padding: "0.875rem 1.5rem",
+            fontSize: "1rem",
+            fontWeight: "600",
+            backgroundColor: "var(--accent)",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: startAuthMutation.isPending ? "not-allowed" : "pointer",
             opacity: startAuthMutation.isPending ? 0.6 : 1,
-            transition: 'opacity 0.2s',
+            transition: "opacity 0.2s",
           }}
         >
-          {startAuthMutation.isPending ? 'Connecting...' : 'Login with Dropbox'}
+          {startAuthMutation.isPending ? "Connecting..." : "Login with Dropbox"}
         </button>
 
         {startAuthMutation.isError && (
           <div
             role="alert"
             style={{
-              padding: '1rem',
-              backgroundColor: 'var(--error-bg)',
-              color: 'var(--error-text)',
-              borderRadius: '8px',
-              border: '1px solid var(--error-border)',
+              padding: "1rem",
+              backgroundColor: "var(--error-bg)",
+              color: "var(--error-text)",
+              borderRadius: "8px",
+              border: "1px solid var(--error-border)",
             }}
           >
             {normalizeError(startAuthMutation.error)}

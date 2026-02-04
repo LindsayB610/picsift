@@ -6,13 +6,13 @@ This document defines the core color palette for PicSift, extracted from CSS gra
 
 The core color palette consists of five colors that form a linear gradient (135deg):
 
-| Color | Hex Code | Stop Position | Description |
-|-------|----------|---------------|-------------|
-| Primary Blue-Purple | `#667eea` | 0% | Main blue-purple shade (also used as fallback color) |
-| Muted Purple | `#764ba2` | 25% | Darker, muted blue-purple |
-| Pink-Magenta | `#f093fb` | 50% | Bright pink/purple accent |
-| Sky Blue | `#4facfe` | 75% | Vibrant light blue |
-| Cyan | `#00f2fe` | 100% | Bright cyan/aqua blue |
+| Color               | Hex Code  | Stop Position | Description                                          |
+| ------------------- | --------- | ------------- | ---------------------------------------------------- |
+| Primary Blue-Purple | `#667eea` | 0%            | Main blue-purple shade (also used as fallback color) |
+| Muted Purple        | `#764ba2` | 25%           | Darker, muted blue-purple                            |
+| Pink-Magenta        | `#f093fb` | 50%           | Bright pink/purple accent                            |
+| Sky Blue            | `#4facfe` | 75%           | Vibrant light blue                                   |
+| Cyan                | `#00f2fe` | 100%          | Bright cyan/aqua blue                                |
 
 ## Gradient Definition
 
@@ -31,6 +31,7 @@ The following screenshots contain CSS code examples showing different ways to im
 3. `assets/color-palette/Screenshot_2026-01-27_at_5.46.49_PM-12c54adc-057c-4b57-a287-a01d94216c17.png`
 
 These screenshots demonstrate:
+
 - Gradient with fallback color
 - Browser-prefixed versions for legacy support
 - SCSS variable implementation

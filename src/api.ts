@@ -3,7 +3,7 @@
  * Phase 7: normalized errors, optional retry for transient failures.
  */
 
-import { normalizeError } from './utils/error';
+import { normalizeError } from "./utils/error";
 import type {
   AuthStartResponse,
   AuthCallbackResponse,
@@ -13,18 +13,18 @@ import type {
   TrashResponse,
   UndoResponse,
   ApiError,
-} from './types';
+} from "./types";
 
-const FUNCTIONS_BASE = '/.netlify/functions';
+const FUNCTIONS_BASE = "/.netlify/functions";
 
 /** Thrown by handleResponse; status preserved for error classification */
 export class ApiClientError extends Error {
   constructor(
     message: string,
-    public readonly status?: number,
+    public readonly status?: number
   ) {
     super(message);
-    this.name = 'ApiClientError';
+    this.name = "ApiClientError";
   }
 }
 
@@ -36,7 +36,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
     let message: string;
     try {
       const body = (await response.json()) as ApiError & { error?: string };
-      message = body.message ?? body.error ?? `Request failed (${response.status})`;
+      message =
+        body.message ?? body.error ?? `Request failed (${response.status})`;
     } catch {
       message = `Request failed (${response.status}). Please try again.`;
     }
@@ -54,7 +55,7 @@ const RETRYABLE_STATUSES = [429, 500, 502, 503, 504];
 
 async function fetchWithRetry(
   url: string,
-  init?: RequestInit,
+  init?: RequestInit
 ): Promise<Response> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -67,7 +68,7 @@ async function fetchWithRetry(
       if (!retryable) return response;
       lastErr = new ApiClientError(
         `Request failed (${response.status}). Please try again.`,
-        response.status,
+        response.status
       );
     } catch (err: unknown) {
       lastErr = err;
@@ -90,19 +91,19 @@ export async function startAuth(): Promise<AuthStartResponse> {
  */
 export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  const state = params.get('state');
+  const code = params.get("code");
+  const state = params.get("state");
 
   if (!code || !state) {
     return {
       success: false,
-      error: 'Missing authorization code or state',
+      error: "Missing authorization code or state",
     };
   }
 
   const callbackUrl = `${FUNCTIONS_BASE}/auth_callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
   const response = await fetch(callbackUrl, {
-    credentials: 'include',
+    credentials: "include",
   });
   return handleResponse<AuthCallbackResponse>(response);
 }
@@ -111,10 +112,10 @@ export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
  * Discover folders with images
  */
 export async function discoverFolders(
-  maxDepth: number = 3,
+  maxDepth: number = 3
 ): Promise<DiscoverFoldersResponse> {
   const response = await fetchWithRetry(
-    `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`,
+    `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`
   );
   return handleResponse<DiscoverFoldersResponse>(response);
 }
@@ -123,15 +124,15 @@ export async function discoverFolders(
  * List images in a folder (or multiple folders)
  */
 export async function listImages(
-  pathOrPaths: string | string[],
+  pathOrPaths: string | string[]
 ): Promise<ListResponse> {
   const body =
-    typeof pathOrPaths === 'string'
+    typeof pathOrPaths === "string"
       ? JSON.stringify({ path: pathOrPaths })
       : JSON.stringify({ paths: pathOrPaths });
   const response = await fetchWithRetry(`${FUNCTIONS_BASE}/list`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body,
   });
   return handleResponse<ListResponse>(response);
@@ -142,8 +143,8 @@ export async function listImages(
  */
 export async function getTempLink(path: string): Promise<TempLinkResponse> {
   const response = await fetchWithRetry(`${FUNCTIONS_BASE}/temp_link`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path }),
   });
   return handleResponse<TempLinkResponse>(response);
@@ -154,11 +155,11 @@ export async function getTempLink(path: string): Promise<TempLinkResponse> {
  */
 export async function trash(
   path: string,
-  sessionId: string,
+  sessionId: string
 ): Promise<TrashResponse> {
   const response = await fetchWithRetry(`${FUNCTIONS_BASE}/trash`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path, session_id: sessionId }),
   });
   return handleResponse<TrashResponse>(response);
@@ -169,11 +170,11 @@ export async function trash(
  */
 export async function undo(
   trashedPath: string,
-  originalPath: string,
+  originalPath: string
 ): Promise<UndoResponse> {
   const response = await fetchWithRetry(`${FUNCTIONS_BASE}/undo`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       trashed_path: trashedPath,
       original_path: originalPath,

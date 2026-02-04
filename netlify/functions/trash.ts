@@ -4,9 +4,9 @@
  * Uses files/move_v2 with autorename: true.
  */
 
-import { createDropboxClient } from './_dropbox';
-import { normalizeError } from './_utils';
-import type { TrashRecord, TrashResponse } from '../../src/types';
+import { createDropboxClient } from "./_dropbox";
+import { normalizeError } from "./_utils";
+import type { TrashRecord, TrashResponse } from "../../src/types";
 
 type HandlerEvent = {
   httpMethod: string;
@@ -24,26 +24,26 @@ type HandlerResponse = {
  * Validate path and session_id to prevent injection / traversal
  */
 function validatePath(path: string): boolean {
-  if (typeof path !== 'string' || path.length === 0) return false;
-  if (path.includes('..')) return false;
-  return path.startsWith('/');
+  if (typeof path !== "string" || path.length === 0) return false;
+  if (path.includes("..")) return false;
+  return path.startsWith("/");
 }
 
 function validateSessionId(sessionId: string): boolean {
-  if (typeof sessionId !== 'string' || sessionId.length === 0) return false;
+  if (typeof sessionId !== "string" || sessionId.length === 0) return false;
   if (sessionId.length > 128) return false;
   // Allow alphanumeric, hyphen, underscore only
   return /^[a-zA-Z0-9_-]+$/.test(sessionId);
 }
 
 export const handler = async (
-  event: HandlerEvent,
+  event: HandlerEvent
 ): Promise<HandlerResponse> => {
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method not allowed' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
 
@@ -55,8 +55,8 @@ export const handler = async (
   } catch {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid JSON body' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid JSON body" }),
     };
   }
 
@@ -66,16 +66,16 @@ export const handler = async (
   if (!path || !validatePath(path)) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid or missing path' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or missing path" }),
     };
   }
 
   if (!sessionId || !validateSessionId(sessionId)) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid or missing session_id' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or missing session_id" }),
     };
   }
 
@@ -105,19 +105,19 @@ export const handler = async (
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(response),
     };
   } catch (err: unknown) {
     const message = normalizeError(err);
-    console.error('[TRASH] Error:', message);
+    console.error("[TRASH] Error:", message);
     const response: TrashResponse = {
       success: false,
       error: message,
     };
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(response),
     };
   }

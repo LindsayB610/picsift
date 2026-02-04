@@ -56,13 +56,13 @@ PicSift is a personal photo triage web app that helps you quickly decide which p
 - **Lint**: `npm run lint` · **Format**: `npm run format`
 - **Tests**: `npm test` (all) · `npm run test:a11y` (accessibility only) · `npm run test:watch` (watch mode)
 
-See [docs/ACCESSIBILITY_TESTING.md](docs/ACCESSIBILITY_TESTING.md) for how accessibility tests work.
+See [docs/ACCESSIBILITY_TESTING.md](docs/ACCESSIBILITY_TESTING.md) for how accessibility tests work. For a full testing and polish checklist (security, manual testing, test data setup), see [docs/TESTING_AND_POLISH.md](docs/TESTING_AND_POLISH.md).
 
 ---
 
 ## Environment Variables
 
-Required environment variables are documented in `.env.example`. Copy it to `.env` for local development and configure the same variables in the Netlify dashboard for production. Never commit `.env` or any secrets.
+Required environment variables are documented in `.env.example`. Copy it to `.env` for local development and configure the same variables in the Netlify dashboard for production. Never commit `.env` or any secrets. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for a deployment checklist and env reference.
 
 ---
 
@@ -95,6 +95,8 @@ Required environment variables are documented in `.env.example`. Copy it to `.en
 ## Docs
 
 - [Setup Guide](docs/SETUP_GUIDE.md) — local dev, env, OAuth, deploy
+- [Deployment](docs/DEPLOYMENT.md) — Netlify deploy and environment variables
+- [Testing & polish](docs/TESTING_AND_POLISH.md) — Phase 8 checklist (security, manual testing, test data)
 - [Build notes & plan](docs/BUILD_NOTES.md) — MVP scope and decisions
 - [Accessibility testing](docs/ACCESSIBILITY_TESTING.md) — how a11y tests run
 

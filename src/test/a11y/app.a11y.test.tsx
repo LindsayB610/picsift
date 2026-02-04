@@ -38,7 +38,7 @@ describe("App accessibility", () => {
     const { container } = render(<App />);
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /login with dropbox/i }),
+        screen.getByRole("button", { name: /login with dropbox/i })
       ).toBeInTheDocument();
     });
     const results = await axe(container, axeJsdomOptions);
@@ -68,7 +68,9 @@ describe("App accessibility", () => {
 
     const { container } = render(<App />);
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /picsift/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /picsift/i })
+      ).toBeInTheDocument();
     });
     const results = await axe(container, axeJsdomOptions);
     expect(results).toHaveNoViolations();
@@ -97,9 +99,13 @@ describe("App accessibility", () => {
 
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: /picsift/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /picsift/i })
+      ).toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: /change folder/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /change folder/i })
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /logout/i })).toBeInTheDocument();
   });
 });

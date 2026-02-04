@@ -7,11 +7,13 @@ This document describes the complete user flow for PicSift, including the new us
 ## New User Flow (First Time)
 
 ### Step 1: Initial Landing
+
 - User visits `picsift.lindsaybrunner.com`
 - Sees login page with README displayed
 - Clicks "Login with Dropbox" button
 
 ### Step 2: Dropbox OAuth
+
 - Redirected to Dropbox for authentication
 - User authorizes PicSift to access their Dropbox
 - Redirected back to `picsift.lindsaybrunner.com/auth/callback`
@@ -20,6 +22,7 @@ This document describes the complete user flow for PicSift, including the new us
 - If unauthorized: Error message, access denied
 
 ### Step 3: Folder Discovery
+
 - After successful authentication, app scans Dropbox for folders containing images
 - **Discovery process**:
   - Start from root (`/`)
@@ -29,6 +32,7 @@ This document describes the complete user flow for PicSift, including the new us
   - Present folders to user sorted by image count (most images first)
 
 ### Step 4: Folder Selection
+
 - User sees list of folders with images
 - Each folder shows:
   - Folder name and path
@@ -45,6 +49,7 @@ This document describes the complete user flow for PicSift, including the new us
     - More complex, but allows triaging across folders
 
 ### Step 5: Start Session
+
 - User confirms folder selection
 - App stores selected folder path (in localStorage or user preferences)
 - App fetches all images from selected folder(s)
@@ -56,12 +61,14 @@ This document describes the complete user flow for PicSift, including the new us
 ## Returning User Flow
 
 ### Step 1: Authentication Check
+
 - User visits `picsift.lindsaybrunner.com`
 - App checks if user is authenticated (tokens valid)
 - If authenticated: proceed to session management
 - If not authenticated: show login page
 
 ### Step 2: Session Management
+
 - **If no active session**:
   - Check if user has a saved folder preference
   - If yes: offer to start new session with saved folder
@@ -71,6 +78,7 @@ This document describes the complete user flow for PicSift, including the new us
   - Or start fresh with new folder
 
 ### Step 3: Start/Resume Session
+
 - User chooses to start new session or resume existing
 - If new: folder selection (or use saved preference)
 - If resume: restore session state from localStorage
@@ -84,11 +92,13 @@ This document describes the complete user flow for PicSift, including the new us
 
 **Function**: `netlify/functions/discover_folders.ts` (new)
 
-**Input**: 
+**Input**:
+
 - `rootPath?: string` (default: "/")
 - `maxDepth?: number` (default: 3)
 
 **Process**:
+
 1. Start from root or specified path
 2. Use `files/list_folder` to get folder contents
 3. For each entry:
@@ -99,6 +109,7 @@ This document describes the complete user flow for PicSift, including the new us
 6. Return list of folders with image counts
 
 **Output**:
+
 ```typescript
 type FolderDiscovery = {
   folders: Array<{
@@ -111,6 +122,7 @@ type FolderDiscovery = {
 ```
 
 **Performance Considerations**:
+
 - Limit recursion depth (3-4 levels max)
 - Limit total folders scanned (e.g., first 100 folders)
 - Cache results (don't re-scan on every visit)
@@ -123,6 +135,7 @@ type FolderDiscovery = {
 ### Component: `src/components/FolderSelector.tsx`
 
 **Design**:
+
 - Clean list of folders
 - Each folder shows:
   - Folder icon/emoji
@@ -134,10 +147,12 @@ type FolderDiscovery = {
 - "Start Session" button (disabled until folder selected)
 
 **For MVP (Single Folder)**:
+
 - Radio button selection (only one selectable)
 - "Start Session" button enabled when one folder selected
 
 **For Future (Multiple Folders)**:
+
 - Checkbox selection (multiple selectable)
 - "Start Session" button enabled when at least one folder selected
 - Shows combined image count
@@ -149,6 +164,7 @@ type FolderDiscovery = {
 ### Options:
 
 **Option A: localStorage (Recommended for MVP)**
+
 - Store selected folder path in `localStorage`
 - Key: `picsift:selectedFolder`
 - Value: `{ path: string, name: string, imageCount: number }`
@@ -156,6 +172,7 @@ type FolderDiscovery = {
 - User can change in settings
 
 **Option B: Server-side (Future)**
+
 - Store in Netlify KV or database
 - Allows sync across devices
 - More complex, requires user accounts
@@ -224,6 +241,7 @@ type FolderDiscovery = {
 ### Phase 2.5: Folder Discovery (New Phase)
 
 **Tasks**:
+
 1. Create `discover_folders.ts` Netlify Function
    - Recursive folder scanning
    - Image detection
@@ -247,6 +265,7 @@ type FolderDiscovery = {
    - Update when user selects new folder
 
 **Deliverables**:
+
 - Folder discovery function
 - Folder selector UI
 - Folder preference persistence
@@ -259,13 +278,14 @@ type FolderDiscovery = {
 ```typescript
 export type SessionState = {
   sessionId: string;
-  sourcePaths: string[];  // Changed from single sourcePath
+  sourcePaths: string[]; // Changed from single sourcePath
   queue: DbxEntry[];
   index: number;
   kept: string[];
   trashed: TrashRecord[];
   undoStack: TrashRecord[];
-  folderPreference?: {  // New
+  folderPreference?: {
+    // New
     path: string;
     name: string;
     imageCount: number;
@@ -280,6 +300,7 @@ export type SessionState = {
 ## Migration from Current Plan
 
 **Changes Needed**:
+
 1. Update `list.ts` to accept array of paths (for future multi-folder support)
 2. Add `discover_folders.ts` function
 3. Add `FolderSelector.tsx` component
@@ -288,5 +309,6 @@ export type SessionState = {
 6. Add folder preference to localStorage
 
 **Backward Compatibility**:
+
 - Default to "/Camera Uploads" if no folder selected (for existing users)
 - Show folder selector if no preference saved

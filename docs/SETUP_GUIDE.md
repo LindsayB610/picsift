@@ -13,6 +13,7 @@ DNS for `picsift.lindsaybrunner.com` has resolved and the SSL certificate is iss
 ### Important: Step Order
 
 The steps are numbered, but here's the recommended order:
+
 - **Do Step 0 first** (Netlify setup) - You need your Netlify URL or custom domain for the Dropbox redirect URI
 - **Then do Step 1** (Dropbox app) - Use your Netlify URL when configuring redirect URIs
 - **Then do Step 2** (Environment variables) - Set up your secrets
@@ -29,7 +30,7 @@ Before we continue, here's what was just implemented:
 ✅ **Authentication System**: Users can log in with Dropbox  
 ✅ **Security**: Only authorized users (you) can access the app  
 ✅ **Folder Discovery**: The app can find folders with photos in your Dropbox  
-✅ **Folder Selection**: You can choose which folder to review photos from  
+✅ **Folder Selection**: You can choose which folder to review photos from
 
 **What's NOT done yet**: The actual photo viewing and triage interface (that's Phase 5). Right now, you can log in and select a folder, but you can't view photos yet.
 
@@ -38,9 +39,11 @@ Before we continue, here's what was just implemented:
 ## Step 0: Set Up Netlify (Do This First or in Parallel)
 
 ### What is Netlify?
+
 Netlify is a hosting service that will run your app on the internet. It's free for personal projects and makes deployment easy by connecting to your GitHub repository.
 
 ### Why do this first?
+
 You'll need your Netlify site URL (or custom domain) to configure the Dropbox OAuth redirect URI. If you've already set up Dropbox, you can still do this step—just update your Dropbox redirect URI afterward.
 
 ### How to do it:
@@ -74,7 +77,7 @@ You'll need your Netlify site URL (or custom domain) to configure the Dropbox OA
    - **Note this URL** - you'll need it for Dropbox redirect URI if you're not using a custom domain yet
 
 5. **Set Up Custom Domain: picsift.lindsaybrunner.com**
-   
+
    **Step 5a: Add Domain in Netlify**
    - In your Netlify site dashboard, go to **"Domain settings"** (in the left sidebar)
    - Click **"Add custom domain"**
@@ -86,19 +89,19 @@ You'll need your Netlify site URL (or custom domain) to configure the Dropbox OA
    - You need to configure DNS records so that `picsift.lindsaybrunner.com` points to Netlify
    - Netlify will show you exactly what to add
    - Typically, you'll need to add one of these:
-     
+
      **Option 1: CNAME Record (Recommended)**
      - Type: `CNAME`
      - Name/Host: `picsift` (or `picsift.lindsaybrunner.com` depending on your DNS provider)
      - Value/Target: `your-site-name.netlify.app` (Netlify will show you the exact value)
      - TTL: 3600 (or default)
-   
+
      **Option 2: A Record (Alternative)**
      - Type: `A`
      - Name/Host: `picsift`
      - Value: Netlify's IP address (Netlify will provide this)
      - TTL: 3600
-   
+
    **Step 5c: Where to add DNS records**
    - Log into your domain registrar (where you bought `lindsaybrunner.com`)
    - Find the DNS management section (might be called "DNS Settings", "DNS Management", "Name Servers", etc.)
@@ -122,6 +125,7 @@ You'll need your Netlify site URL (or custom domain) to configure the Dropbox OA
    - If you see a Netlify error page, wait a bit longer for DNS to propagate
 
 ### Important Notes:
+
 - **If you're using the custom domain**: Use `https://picsift.lindsaybrunner.com` in your Dropbox redirect URI
 - **If you're not using custom domain yet**: Use your Netlify URL (like `https://random-name-12345.netlify.app`) in your Dropbox redirect URI
 - You can always update the Dropbox redirect URI later when your custom domain is ready
@@ -131,9 +135,11 @@ You'll need your Netlify site URL (or custom domain) to configure the Dropbox OA
 ## Step 1: Create Your Dropbox App
 
 ### What is this?
+
 Dropbox needs to know about your app before it can let users log in. Think of it like registering your app with Dropbox so they know it's safe.
 
 ### If you've already created your Dropbox app:
+
 If you've already completed this step, you can skip to the parts you need (like getting your App Key and App Secret, or updating redirect URIs if your Netlify setup is now complete).
 
 ### How to do it:
@@ -148,24 +154,24 @@ If you've already completed this step, you can skip to the parts you need (like 
    - You'll see a form to fill out
 
 3. **Fill out the App Creation Form**
-   
+
    **Choose an API:**
    - Select **"Scoped access"** (this gives your app limited, specific permissions)
-   
+
    **Choose the type of access you need:**
    - Select **"Full Dropbox"** (you need this to access folders and files)
-   
+
    **Name your app:**
    - Enter something like: `PicSift` or `PicSift Photo Triage`
    - This name will appear when users authorize your app
-   
+
    **Click "Create app"**
 
 4. **Configure OAuth Settings**
    - After creating the app, you'll be on the app's settings page
    - Scroll down to find the **"OAuth 2"** section
    - Look for **"Redirect URIs"** or **"Redirect URLs"**
-   
+
    **If you haven't added redirect URIs yet:**
    - Click **"Add"** or **"Add redirect URI"**
    - Enter this URL (for local testing):
@@ -181,7 +187,7 @@ If you've already completed this step, you can skip to the parts you need (like 
      https://your-site-name.netlify.app/.netlify/functions/auth_callback
      ```
      (Replace `your-site-name` with your actual Netlify site name)
-   
+
    **If you've already added redirect URIs:**
    - Verify that you have both the localhost and production URLs listed
    - If you set up Netlify after creating your Dropbox app, make sure your production redirect URI matches your actual Netlify URL or custom domain
@@ -202,9 +208,11 @@ If you've already completed this step, you can skip to the parts you need (like 
 ## Step 2: Set Up Netlify Environment Variables
 
 ### What are environment variables?
+
 Think of environment variables as secret settings that your app needs to work, but that you don't want to put in your code (for security). They're stored separately and only your app can access them.
 
 ### Prerequisites:
+
 - You should have completed **Step 0** (Netlify setup) or at least have a Netlify account and site created
 - You should have completed **Step 1** (Dropbox app creation) and have your App Key and App Secret
 
@@ -245,22 +253,22 @@ Think of environment variables as secret settings that your app needs to work, b
 3. **Add Environment Variables**
    - Click **"Add variable"** or **"New variable"**
    - Add each variable one at a time:
-   
+
    **Variable 1 (recommended for custom domain):**
    - **Key**: `NETLIFY_URL`
    - **Value**: `https://picsift.lindsaybrunner.com` (or your Netlify URL)
    - This ensures OAuth redirects use HTTPS and your custom domain so Dropbox doesn't show "doesn't support secure connections". Click **"Save"**
-   
+
    **Variable 2:**
    - **Key**: `DROPBOX_APP_KEY`
    - **Value**: (paste your App Key from Step 1)
    - Click **"Save"**
-   
+
    **Variable 3:**
    - **Key**: `DROPBOX_APP_SECRET`
    - **Value**: (paste your App Secret from Step 1)
    - Click **"Save"**
-   
+
    **Variable 4:**
    - **Key**: `AUTHORIZED_DROPBOX_ACCOUNT_ID`
    - **Value**: (leave empty for now - we'll fill this after first login)
@@ -276,6 +284,7 @@ Think of environment variables as secret settings that your app needs to work, b
 ## Step 3: Test the Authentication Flow Locally
 
 ### What is this?
+
 Before deploying to the internet, we want to test that everything works on your computer.
 
 ### How to do it:
@@ -339,6 +348,7 @@ Before deploying to the internet, we want to test that everything works on your 
 ## Step 4: Handle the Refresh Token
 
 ### What is a refresh token?
+
 After you log in, Dropbox gives your app a "refresh token" that allows it to get new access tokens without asking you to log in again. This needs to be stored securely.
 
 ### How to do it:
@@ -349,12 +359,13 @@ After you log in, Dropbox gives your app a "refresh token" that allows it to get
    - **Copy this value** - it's a long string of characters
 
 2. **Add it to your environment variables**
-   
+
    **For local testing (.env file):**
+
    ```
    DROPBOX_REFRESH_TOKEN=your_refresh_token_here
    ```
-   
+
    **For Netlify:**
    - Go to Netlify dashboard → Site settings → Environment variables
    - Add a new variable:
@@ -373,9 +384,11 @@ After you log in, Dropbox gives your app a "refresh token" that allows it to get
 ## Step 5: Verify Production Deployment
 
 ### What is this?
+
 This step helps you verify that everything is working correctly on your live site. If you've already completed Step 0 (Netlify setup), your site should be deployed automatically whenever you push to GitHub.
 
 ### Prerequisites:
+
 - You should have completed **Step 0** (Netlify setup and custom domain)
 - You should have completed **Step 2** (Environment variables in Netlify)
 - Your code should be pushed to GitHub (which triggers automatic deployment)
@@ -447,10 +460,12 @@ This step helps you verify that everything is working correctly on your live sit
 If **Verify DNS configuration** succeeds but **Provision certificate** keeps failing, or you see **ERR_CERT_COMMON_NAME_INVALID** in the browser, work through these steps. (Your DNS and traffic are already correct: the domain points to Netlify and responses show `Server: Netlify`.)
 
 ### 1. Try "Renew certificate" in Netlify
+
 - **Domain management** → **HTTPS**.
 - If you see **Renew certificate** (or **Renew**), click it and wait a few minutes. Sometimes a renewed request succeeds when the first one didn’t.
 
 ### 2. Run Let’s Encrypt’s diagnostic
+
 - Go to **[Let’s Debug](https://letsdebug.net/)**.
 - Enter **picsift.lindsaybrunner.com** and run the check.
 - Fix any issues it reports, for example:
@@ -458,14 +473,17 @@ If **Verify DNS configuration** succeeds but **Provision certificate** keeps fai
   - **DNSSEC** problems → if you use DNSSEC for lindsaybrunner.com, Netlify’s docs say they don’t support DNSSEC; you’d need to use external DNS only (which you do) and ensure DNSSEC doesn’t block Let’s Encrypt.
 
 ### 3. Clear DNS caches and retry
+
 - Netlify’s docs say old DNS caches can block provisioning. Your CNAME TTL is 4 hours.
 - Use **[Google Public DNS cache flush](https://developers.google.com/speed/public-dns/cache)** for `picsift.lindsaybrunner.com` (if the tool allows).
 - Wait 10–15 minutes, then in Netlify click **Verify DNS configuration** again, then **Provision certificate**.
 
 ### 4. No proxy in front of the subdomain
+
 - If Squarespace (or anything else) is **proxying** traffic for `picsift` (so visitors hit their servers first instead of Netlify), Let’s Encrypt validation can fail. In Squarespace DNS, the `picsift` CNAME should be **DNS-only** (no proxy / no “accelerate and protect” style option). If you see a proxy toggle, turn it off for this record.
 
 ### 5. Ask Netlify to fix the certificate
+
 - Open a thread in the **[Netlify Support Forums](https://answers.netlify.com/)** or use **[Netlify Support](https://www.netlify.com/support)**.
 - Include:
   - **Site name:** picsift (or the exact Netlify site name).
@@ -475,6 +493,7 @@ If **Verify DNS configuration** succeeds but **Provision certificate** keeps fai
 - Support can see provisioning logs and can often fix or re-trigger certificate issuance.
 
 ### Workaround while the cert is broken
+
 - Use **https://picsift.netlify.app** for the app and Dropbox (see troubleshooting entry below for exact steps).
 
 ---
@@ -482,15 +501,19 @@ If **Verify DNS configuration** succeeds but **Provision certificate** keeps fai
 ## Troubleshooting
 
 ### Problem: "DROPBOX_APP_KEY not configured"
+
 **Solution**: Make sure you've set the environment variables in Netlify (or in your `.env` file for local testing).
 
 ### Problem: "Doesn't support secure connections" or "then nothing" after Login
-**Solution**: 
+
+**Solution**:
+
 - Dropbox requires **HTTPS** for the redirect URI in production. Set **`NETLIFY_URL`** in Netlify to `https://picsift.lindsaybrunner.com` (Site configuration → Environment variables). Then trigger a new deploy so the functions use it.
 - Ensure the redirect URI in your Dropbox app is exactly: `https://picsift.lindsaybrunner.com/.netlify/functions/auth_callback` (no trailing slash, https).
 - After changing env vars, always **Trigger deploy** in Netlify so the new values are used.
 
 ### Problem: Custom domain Let's Encrypt certificate keeps failing (ERR_CERT_COMMON_NAME_INVALID)
+
 **Solution**: Use the **Netlify URL** instead until the custom domain cert works (or contact Netlify support):
 
 1. **Dropbox App Console** → OAuth 2 → Redirect URIs: add  
@@ -507,7 +530,9 @@ If **Verify DNS configuration** succeeds but **Provision certificate** keeps fai
    You can switch back to the custom domain later when the cert is fixed.
 
 ### Problem: "Invalid redirect URI"
-**Solution**: 
+
+**Solution**:
+
 - Check that the redirect URI in your Dropbox app settings exactly matches:
   - For local: `http://localhost:8888/.netlify/functions/auth_callback`
   - For production: `https://picsift.lindsaybrunner.com/.netlify/functions/auth_callback`
@@ -515,25 +540,33 @@ If **Verify DNS configuration** succeeds but **Provision certificate** keeps fai
 - Make sure there are no extra spaces or typos
 
 ### Problem: "Access denied" after logging in
-**Solution**: 
+
+**Solution**:
+
 - Make sure you've set `AUTHORIZED_DROPBOX_ACCOUNT_ID` with your actual account ID
 - Get your account ID from the first successful login (before adding the restriction)
 - The account ID format is: `dbid:xxxxxxxxxxxxx`
 
 ### Problem: "Failed to discover folders"
+
 **Solution**:
+
 - Make sure you've set `DROPBOX_REFRESH_TOKEN` in environment variables
 - The refresh token is obtained after the first successful OAuth login
 - Check that your Dropbox app has "Full Dropbox" access (not just "App folder")
 
 ### Problem: Can't see the login page
+
 **Solution**:
+
 - Make sure the development server is running (`npm run dev:functions`)
 - Check that you're going to the right URL (http://localhost:8888 for local)
 - Check the terminal for any error messages
 
 ### Problem: Environment variables not working
+
 **Solution**:
+
 - For local testing: Make sure your `.env` file is in the project root directory
 - For Netlify: After adding environment variables, trigger a new deployment
 - Environment variables are case-sensitive - make sure they match exactly
@@ -568,11 +601,12 @@ Make sure you have all of these set (either in `.env` for local or in Netlify):
 
 - [ ] `NETLIFY_URL` - **Recommended:** `https://picsift.lindsaybrunner.com` (ensures HTTPS redirect for Dropbox)
 - [ ] `DROPBOX_APP_KEY` - From Dropbox App Console
-- [ ] `DROPBOX_APP_SECRET` - From Dropbox App Console  
+- [ ] `DROPBOX_APP_SECRET` - From Dropbox App Console
 - [ ] `DROPBOX_REFRESH_TOKEN` - Obtained after first OAuth login
 - [ ] `AUTHORIZED_DROPBOX_ACCOUNT_ID` - **Required in production:** Your Dropbox account ID (format: `dbid:xxxxxxxxxxxxx`) — only this account can use the app
 
 **Optional:**
+
 - `URL` - Auto-set by Netlify (backup if NETLIFY_URL not set)
 - [ ] `DROPBOX_SOURCE_PATH` - Default folder path (optional, defaults to "/Camera Uploads")
 
@@ -581,6 +615,7 @@ Make sure you have all of these set (either in `.env` for local or in Netlify):
 ## Need Help?
 
 If you get stuck:
+
 1. Check the error messages in the browser console (F12 → Console tab)
 2. Check the terminal output where Netlify Dev is running
 3. Review the troubleshooting section above

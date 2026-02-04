@@ -18,7 +18,7 @@
   --error-bg: rgba(220, 53, 69, 0.12);
   --error-text: #f87171;
   --error-border: rgba(220, 53, 69, 0.3);
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
   /* Mobile-first layout */
   --page-padding: max(1rem, env(safe-area-inset-left));
   --page-padding-right: max(1rem, env(safe-area-inset-right));
@@ -82,7 +82,8 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: var(--page-padding) var(--page-padding-right) var(--page-padding-bottom);
+  padding: var(--page-padding) var(--page-padding-right)
+    var(--page-padding-bottom);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -104,6 +105,33 @@ body {
   padding: 0.625rem 1rem;
 }
 
+/* Focus styles for accessibility (keyboard/screen reader) */
+button:focus-visible,
+a:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Viewer: smooth image appearance */
+.viewer-image-wrap img {
+  animation: viewer-image-in 0.2s ease-out;
+}
+@keyframes viewer-image-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Loading placeholder subtle pulse (optional) */
+.viewer-loading,
+.viewer-placeholder {
+  transition: opacity 0.15s ease;
+}
+
 /* Markdown (Login / README) on dark background */
 .markdown-content h1,
 .markdown-content h2 {
@@ -112,12 +140,28 @@ body {
   margin-bottom: 0.5em;
   font-weight: 600;
 }
-.markdown-content h1 { font-size: 1.35rem; margin-top: 0; }
-.markdown-content h2 { font-size: 1.1rem; }
-.markdown-content p { margin: 0.75em 0; color: var(--text); }
-.markdown-content ul { margin: 0.75em 0; padding-left: 1.25rem; color: var(--text); }
-.markdown-content li { margin: 0.25em 0; }
-.markdown-content strong { color: var(--text-h); }
+.markdown-content h1 {
+  font-size: 1.35rem;
+  margin-top: 0;
+}
+.markdown-content h2 {
+  font-size: 1.1rem;
+}
+.markdown-content p {
+  margin: 0.75em 0;
+  color: var(--text);
+}
+.markdown-content ul {
+  margin: 0.75em 0;
+  padding-left: 1.25rem;
+  color: var(--text);
+}
+.markdown-content li {
+  margin: 0.25em 0;
+}
+.markdown-content strong {
+  color: var(--text-h);
+}
 .markdown-content code {
   background: var(--bg-elevated);
   color: var(--brand-cyan);
@@ -125,7 +169,11 @@ body {
   border-radius: 4px;
   font-size: 0.9em;
 }
-.markdown-content hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
 
 @media (min-width: 640px) {
   .markdown-content {

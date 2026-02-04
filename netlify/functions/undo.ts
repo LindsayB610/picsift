@@ -3,9 +3,9 @@
  * Moves file from trashed_path back to original_path using files/move_v2.
  */
 
-import { createDropboxClient } from './_dropbox';
-import { normalizeError } from './_utils';
-import type { UndoResponse } from '../../src/types';
+import { createDropboxClient } from "./_dropbox";
+import { normalizeError } from "./_utils";
+import type { UndoResponse } from "../../src/types";
 
 type HandlerEvent = {
   httpMethod: string;
@@ -20,19 +20,19 @@ type HandlerResponse = {
 };
 
 function validatePath(path: string): boolean {
-  if (typeof path !== 'string' || path.length === 0) return false;
-  if (path.includes('..')) return false;
-  return path.startsWith('/');
+  if (typeof path !== "string" || path.length === 0) return false;
+  if (path.includes("..")) return false;
+  return path.startsWith("/");
 }
 
 export const handler = async (
-  event: HandlerEvent,
+  event: HandlerEvent
 ): Promise<HandlerResponse> => {
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method not allowed' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
 
@@ -47,8 +47,8 @@ export const handler = async (
   } catch {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid JSON body' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid JSON body" }),
     };
   }
 
@@ -58,25 +58,25 @@ export const handler = async (
   if (!trashedPath || !validatePath(trashedPath)) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid or missing trashed_path' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or missing trashed_path" }),
     };
   }
 
   if (!originalPath || !validatePath(originalPath)) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid or missing original_path' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or missing original_path" }),
     };
   }
 
   // Ensure trashed_path is under /_TRASHME/
-  if (!trashedPath.startsWith('/_TRASHME/')) {
+  if (!trashedPath.startsWith("/_TRASHME/")) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'trashed_path must be under /_TRASHME/' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "trashed_path must be under /_TRASHME/" }),
     };
   }
 
@@ -93,19 +93,19 @@ export const handler = async (
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(response),
     };
   } catch (err: unknown) {
     const message = normalizeError(err);
-    console.error('[UNDO] Error:', message);
+    console.error("[UNDO] Error:", message);
     const response: UndoResponse = {
       success: false,
       error: message,
     };
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(response),
     };
   }

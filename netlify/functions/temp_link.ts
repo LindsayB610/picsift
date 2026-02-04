@@ -3,9 +3,9 @@
  * Used for displaying images in the browser (link expires in 4 hours).
  */
 
-import { createDropboxClient } from './_dropbox';
-import { normalizeError } from './_utils';
-import type { TempLinkResponse } from '../../src/types';
+import { createDropboxClient } from "./_dropbox";
+import { normalizeError } from "./_utils";
+import type { TempLinkResponse } from "../../src/types";
 
 type HandlerEvent = {
   httpMethod: string;
@@ -20,19 +20,19 @@ type HandlerResponse = {
 };
 
 function validatePath(path: string): boolean {
-  if (typeof path !== 'string' || path.length === 0) return false;
-  if (path.includes('..')) return false;
-  return path.startsWith('/');
+  if (typeof path !== "string" || path.length === 0) return false;
+  if (path.includes("..")) return false;
+  return path.startsWith("/");
 }
 
 export const handler = async (
-  event: HandlerEvent,
+  event: HandlerEvent
 ): Promise<HandlerResponse> => {
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method not allowed' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
 
@@ -42,8 +42,8 @@ export const handler = async (
   } catch {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid JSON body' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid JSON body" }),
     };
   }
 
@@ -51,8 +51,8 @@ export const handler = async (
   if (!path || !validatePath(path)) {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid or missing path' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid or missing path" }),
     };
   }
 
@@ -70,17 +70,17 @@ export const handler = async (
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(response),
     };
   } catch (err: unknown) {
     const message = normalizeError(err);
-    console.error('[TEMP_LINK] Error:', message);
+    console.error("[TEMP_LINK] Error:", message);
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        error: 'Failed to get temporary link',
+        error: "Failed to get temporary link",
         message,
       }),
     };

@@ -4,19 +4,19 @@
  */
 
 // Load .env file for local development (Netlify Dev doesn't auto-load .env)
-if (process.env.NODE_ENV !== 'production' && !process.env.NETLIFY) {
+if (process.env.NODE_ENV !== "production" && !process.env.NETLIFY) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
-    const path = require('path');
+    const path = require("path");
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-    require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+    require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
   } catch {
     // dotenv not available, continue without it
   }
 }
 
-import { Dropbox } from 'dropbox';
-import type { DropboxResponse } from 'dropbox';
+import { Dropbox } from "dropbox";
+import type { DropboxResponse } from "dropbox";
 
 // Token cache (in-memory, short-lived)
 interface TokenCache {
@@ -34,7 +34,7 @@ const TOKEN_CACHE_TTL = 55 * 60 * 1000; // 55 minutes (tokens expire in 1 hour)
 function getRefreshToken(): string {
   const token = process.env.DROPBOX_REFRESH_TOKEN;
   if (!token) {
-    throw new Error('DROPBOX_REFRESH_TOKEN not configured');
+    throw new Error("DROPBOX_REFRESH_TOKEN not configured");
   }
   return token;
 }
@@ -62,16 +62,18 @@ async function refreshAccessToken(): Promise<{
   const appSecret = process.env.DROPBOX_APP_SECRET;
 
   if (!appKey || !appSecret) {
-    throw new Error('DROPBOX_APP_KEY and DROPBOX_APP_SECRET must be configured');
+    throw new Error(
+      "DROPBOX_APP_KEY and DROPBOX_APP_SECRET must be configured"
+    );
   }
 
-  const response = await fetch('https://api.dropbox.com/oauth2/token', {
-    method: 'POST',
+  const response = await fetch("https://api.dropbox.com/oauth2/token", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
-      grant_type: 'refresh_token',
+      grant_type: "refresh_token",
       refresh_token: refreshToken,
       client_id: appKey,
       client_secret: appSecret,
@@ -81,11 +83,9 @@ async function refreshAccessToken(): Promise<{
   if (!response.ok) {
     const errorText = await response.text();
     console.error(
-      `[DROPBOX] Token refresh failed: ${response.status} ${errorText}`,
+      `[DROPBOX] Token refresh failed: ${response.status} ${errorText}`
     );
-    throw new Error(
-      `Token refresh failed: ${response.status} ${errorText}`,
-    );
+    throw new Error(`Token refresh failed: ${response.status} ${errorText}`);
   }
 
   const data = (await response.json()) as {
@@ -113,11 +113,12 @@ async function refreshAccessToken(): Promise<{
  */
 async function validateTokenAccount(
   accessToken: string,
-  accountId: string,
+  accountId: string
 ): Promise<boolean> {
   const authorizedAccountId = getAuthorizedAccountId();
   const authorizedEmail = getAuthorizedEmail();
-  const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
+  const isLocalDev =
+    !process.env.NETLIFY && process.env.NODE_ENV !== "production";
 
   // In production: require at least one to be set; otherwise reject (fail closed)
   if (!isLocalDev && !authorizedAccountId && !authorizedEmail) {
@@ -134,7 +135,7 @@ async function validateTokenAccount(
     const matches = accountId === authorizedAccountId;
     if (!matches) {
       console.error(
-        `[TOKEN VALIDATION] Account ID mismatch: expected "${authorizedAccountId}", got "${accountId}"`,
+        `[TOKEN VALIDATION] Account ID mismatch: expected "${authorizedAccountId}", got "${accountId}"`
       );
     }
     return matches;
@@ -163,7 +164,7 @@ export async function getAccessToken(): Promise<string> {
     // Validate cached token still belongs to authorized user
     const isValid = await validateTokenAccount(
       tokenCache.access_token,
-      tokenCache.account_id,
+      tokenCache.account_id
     );
     if (isValid) {
       return tokenCache.access_token;
@@ -176,16 +177,17 @@ export async function getAccessToken(): Promise<string> {
   const { access_token, account_id } = await refreshAccessToken();
 
   // In production: always validate token belongs to authorized user
-  const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
+  const isLocalDev =
+    !process.env.NETLIFY && process.env.NODE_ENV !== "production";
   if (!isLocalDev) {
     const isValid = await validateTokenAccount(access_token, account_id);
     if (!isValid) {
       const authorizedAccountId = getAuthorizedAccountId();
       const authorizedEmail = getAuthorizedEmail();
       console.error(
-        `[SECURITY] Token validation failed: account_id ${account_id} is not authorized (expected: ${authorizedAccountId || authorizedEmail || 'AUTHORIZED_DROPBOX_ACCOUNT_ID or AUTHORIZED_DROPBOX_EMAIL must be set'})`,
+        `[SECURITY] Token validation failed: account_id ${account_id} is not authorized (expected: ${authorizedAccountId || authorizedEmail || "AUTHORIZED_DROPBOX_ACCOUNT_ID or AUTHORIZED_DROPBOX_EMAIL must be set"})`
       );
-      throw new Error('Unauthorized: Token does not belong to authorized user');
+      throw new Error("Unauthorized: Token does not belong to authorized user");
     }
   } else {
     console.log(`[DROPBOX] Using token for account_id: ${account_id}`);
@@ -214,7 +216,7 @@ export async function createDropboxClient(): Promise<Dropbox> {
  * Handles token refresh, validation, and error handling
  */
 export async function dbxCall<T>(
-  apiCall: (dbx: Dropbox) => Promise<DropboxResponse<T>>,
+  apiCall: (dbx: Dropbox) => Promise<DropboxResponse<T>>
 ): Promise<T> {
   try {
     const dbx = await createDropboxClient();
@@ -222,43 +224,45 @@ export async function dbxCall<T>(
     return response.result;
   } catch (err: unknown) {
     // Log the full error for debugging
-    console.error('[DROPBOX] API call error:', err);
+    console.error("[DROPBOX] API call error:", err);
     if (err instanceof Error) {
-      console.error('[DROPBOX] Error message:', err.message);
-      console.error('[DROPBOX] Error stack:', err.stack);
+      console.error("[DROPBOX] Error message:", err.message);
+      console.error("[DROPBOX] Error stack:", err.stack);
     }
 
     // Try to extract Dropbox-specific error details
-    if (err != null && typeof err === 'object') {
+    if (err != null && typeof err === "object") {
       const errorObj = err as Record<string, unknown>;
-      if ('error' in errorObj) {
-        console.error('[DROPBOX] Dropbox error field:', errorObj.error);
+      if ("error" in errorObj) {
+        console.error("[DROPBOX] Dropbox error field:", errorObj.error);
       }
-      if ('status' in errorObj) {
-        console.error('[DROPBOX] HTTP status:', errorObj.status);
+      if ("status" in errorObj) {
+        console.error("[DROPBOX] HTTP status:", errorObj.status);
       }
-      if ('statusText' in errorObj) {
-        console.error('[DROPBOX] HTTP status text:', errorObj.statusText);
+      if ("statusText" in errorObj) {
+        console.error("[DROPBOX] HTTP status text:", errorObj.statusText);
       }
       // DropboxResponseError might have error_summary or error_tag
-      if ('error_summary' in errorObj) {
-        console.error('[DROPBOX] Error summary:', errorObj.error_summary);
+      if ("error_summary" in errorObj) {
+        console.error("[DROPBOX] Error summary:", errorObj.error_summary);
       }
-      if ('error_tag' in errorObj) {
-        console.error('[DROPBOX] Error tag:', errorObj.error_tag);
+      if ("error_tag" in errorObj) {
+        console.error("[DROPBOX] Error tag:", errorObj.error_tag);
       }
     }
 
     // Handle token errors
     const errMessage = err instanceof Error ? err.message : String(err);
     if (
-      errMessage.includes('expired') ||
-      errMessage.includes('invalid_token') ||
-      errMessage.includes('401') ||
-      errMessage.includes('400')
+      errMessage.includes("expired") ||
+      errMessage.includes("invalid_token") ||
+      errMessage.includes("401") ||
+      errMessage.includes("400")
     ) {
       // Clear cache and retry once
-      console.log('[DROPBOX] Token error detected, clearing cache and retrying...');
+      console.log(
+        "[DROPBOX] Token error detected, clearing cache and retrying..."
+      );
       tokenCache = null;
       const dbx = await createDropboxClient();
       const response = await apiCall(dbx);

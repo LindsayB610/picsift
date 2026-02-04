@@ -16,7 +16,7 @@ export interface DbxEntry {
   size: number;
   content_hash?: string;
   is_downloadable: boolean;
-  '.tag': 'file';
+  ".tag": "file";
 }
 
 /**
@@ -27,7 +27,7 @@ export interface DbxFolder {
   path_lower: string;
   path_display: string;
   id: string;
-  '.tag': 'folder';
+  ".tag": "folder";
 }
 
 /**

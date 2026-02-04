@@ -42,7 +42,7 @@ describe("FolderSelector accessibility", () => {
 
   it("has no axe violations when folders are listed", async () => {
     const { container } = render(
-      <FolderSelector onFolderSelected={noop} onCancel={noop} />,
+      <FolderSelector onFolderSelected={noop} onCancel={noop} />
     );
     const results = await axe(container, axeJsdomOptions);
     expect(results).toHaveNoViolations();
@@ -51,7 +51,7 @@ describe("FolderSelector accessibility", () => {
   it("has a heading for the section", () => {
     render(<FolderSelector onFolderSelected={noop} onCancel={noop} />);
     expect(
-      screen.getByRole("heading", { name: /select a folder/i }),
+      screen.getByRole("heading", { name: /select a folder/i })
     ).toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe("FolderSelector accessibility", () => {
     render(<FolderSelector onFolderSelected={noop} onCancel={noop} />);
     expect(screen.getByRole("button", { name: /2024/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /camera roll/i }),
+      screen.getByRole("button", { name: /camera roll/i })
     ).toBeInTheDocument();
   });
 
@@ -67,7 +67,7 @@ describe("FolderSelector accessibility", () => {
     render(<FolderSelector onFolderSelected={noop} onCancel={noop} />);
     expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /start session/i }),
+      screen.getByRole("button", { name: /start session/i })
     ).toBeInTheDocument();
   });
 });

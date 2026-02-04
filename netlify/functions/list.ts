@@ -4,9 +4,9 @@
  * filters to image files only.
  */
 
-import { createDropboxClient } from './_dropbox';
-import { normalizeError } from './_utils';
-import type { DbxEntry, ListResponse } from '../../src/types';
+import { createDropboxClient } from "./_dropbox";
+import { normalizeError } from "./_utils";
+import type { DbxEntry, ListResponse } from "../../src/types";
 
 type HandlerEvent = {
   httpMethod: string;
@@ -21,16 +21,16 @@ type HandlerResponse = {
 };
 
 const IMAGE_EXTENSIONS = new Set([
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.heic',
-  '.webp',
-  '.gif',
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".heic",
+  ".webp",
+  ".gif",
 ]);
 
 function isImageFile(name: string): boolean {
-  const ext = name.toLowerCase().substring(name.lastIndexOf('.'));
+  const ext = name.toLowerCase().substring(name.lastIndexOf("."));
   return IMAGE_EXTENSIONS.has(ext);
 }
 
@@ -38,10 +38,10 @@ function isImageFile(name: string): boolean {
  * Validate path to prevent traversal (e.g. ".." or absolute paths outside Dropbox)
  */
 function validatePath(path: string): boolean {
-  if (typeof path !== 'string' || path.length === 0) return false;
-  if (path.includes('..')) return false;
+  if (typeof path !== "string" || path.length === 0) return false;
+  if (path.includes("..")) return false;
   // Dropbox paths are typically "/folder" or "" for root
-  return path === '' || path.startsWith('/');
+  return path === "" || path.startsWith("/");
 }
 
 function toDbxEntry(entry: {
@@ -55,12 +55,12 @@ function toDbxEntry(entry: {
   server_modified?: string;
 }): DbxEntry {
   const result: DbxEntry = {
-    '.tag': 'file',
+    ".tag": "file",
     name: entry.name,
     path_lower: entry.path_lower,
     path_display: entry.path_display,
     id: entry.id,
-    rev: entry.rev ?? '',
+    rev: entry.rev ?? "",
     size: entry.size ?? 0,
     is_downloadable: true,
   };
@@ -74,39 +74,41 @@ function toDbxEntry(entry: {
 }
 
 export const handler = async (
-  event: HandlerEvent,
+  event: HandlerEvent
 ): Promise<HandlerResponse> => {
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method not allowed' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
 
   let payload: { path?: string; paths?: string[] };
   try {
-    payload = event.body ? (JSON.parse(event.body) as { path?: string; paths?: string[] }) : {};
+    payload = event.body
+      ? (JSON.parse(event.body) as { path?: string; paths?: string[] })
+      : {};
   } catch {
     return {
       statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid JSON body' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Invalid JSON body" }),
     };
   }
 
   const paths: string[] = Array.isArray(payload.paths)
     ? payload.paths
-    : typeof payload.path === 'string'
+    : typeof payload.path === "string"
       ? [payload.path]
-      : ['/Camera Uploads'];
+      : ["/Camera Uploads"];
 
   for (const p of paths) {
     if (!validatePath(p)) {
       return {
         statusCode: 400,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Invalid path' }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Invalid path" }),
       };
     }
   }
@@ -123,13 +125,13 @@ export const handler = async (
         const result = cursor
           ? await dbx.filesListFolderContinue({ cursor })
           : await dbx.filesListFolder({
-              path: folderPath || '',
+              path: folderPath || "",
               recursive: false,
             });
 
         const entries = result.result.entries;
         for (const entry of entries) {
-          if (entry['.tag'] === 'file' && isImageFile(entry.name)) {
+          if (entry[".tag"] === "file" && isImageFile(entry.name)) {
             const fileEntry = entry as {
               name: string;
               path_lower: string;
@@ -156,17 +158,17 @@ export const handler = async (
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(response),
     };
   } catch (err: unknown) {
     const message = normalizeError(err);
-    console.error('[LIST] Error:', message);
+    console.error("[LIST] Error:", message);
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        error: 'Failed to list folder',
+        error: "Failed to list folder",
         message,
       }),
     };

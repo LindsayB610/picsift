@@ -7,7 +7,9 @@ This document captures questions that need to be answered before beginning imple
 ## Token Storage & Management
 
 ### 1. Refresh Token Storage Mechanism
+
 **Question**: How should we store the refresh token securely?
+
 - **Option A**: Netlify environment variable (simple, but manual update required if token changes)
 - **Option B**: Netlify KV store (programmatic, but requires KV setup)
 - **Option C**: Netlify Blob store (programmatic, encrypted)
@@ -20,7 +22,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 2. Token Caching Strategy
+
 **Question**: How should we cache access tokens in `_dropbox.ts`?
+
 - **Option A**: In-memory cache (per function invocation, lost on cold start)
 - **Option B**: Shared cache across function invocations (requires external storage)
 - **Option C**: No caching (always refresh, simpler but slower)
@@ -32,7 +36,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 3. Account ID Storage with Tokens
+
 **Question**: Where should we store the account ID alongside tokens for validation?
+
 - **Option A**: Same location as refresh token (env var or KV)
 - **Option B**: Separate storage
 - **Option C**: Validate on every request without caching (slower but simpler)
@@ -46,7 +52,9 @@ This document captures questions that need to be answered before beginning imple
 ## OAuth Implementation
 
 ### 4. OAuth State Parameter Storage
+
 **Question**: How should we store the OAuth state parameter for CSRF protection?
+
 - **Option A**: HTTP-only cookie (secure, automatic expiration)
 - **Option B**: Server-side session (requires session store)
 - **Option C**: Signed cookie (can be validated without server-side storage)
@@ -59,7 +67,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 5. OAuth Callback Error Handling
+
 **Question**: What should happen if OAuth callback fails (invalid state, token exchange fails, unauthorized user)?
+
 - **Option A**: Redirect to login page with error message
 - **Option B**: Show error page
 - **Option C**: Return JSON error to frontend (if using SPA pattern)
@@ -73,7 +83,9 @@ This document captures questions that need to be answered before beginning imple
 ## Session Management
 
 ### 6. Session State Persistence
+
 **Question**: Should session state be persisted to localStorage?
+
 - **Option A**: Yes, persist everything (queue, index, kept, trashed) - allows resume after page reload
 - **Option B**: No persistence (start fresh on reload) - simpler, but loses progress
 - **Option C**: Partial persistence (only sessionId, re-fetch queue) - balance between simplicity and UX
@@ -85,7 +97,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 7. Session ID Format
+
 **Question**: What format should we use for sessionId?
+
 - **Option A**: UUID v4 (standard, collision-resistant)
 - **Option B**: ISO timestamp (human-readable, sortable)
 - **Option C**: Custom format combining timestamp + random
@@ -99,7 +113,9 @@ This document captures questions that need to be answered before beginning imple
 ## UI/UX Decisions
 
 ### 8. Image Display Size
+
 **Question**: How should images be displayed?
+
 - **Option A**: Full-screen (immersive, minimal UI)
 - **Option B**: Large centered view with controls visible (better for quick decisions)
 - **Option C**: Responsive (full-screen on desktop, smaller on mobile)
@@ -111,7 +127,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 9. Keyboard Shortcut Display
+
 **Question**: Should keyboard shortcuts be visible in the UI?
+
 - **Option A**: Always visible (helpful for discoverability)
 - **Option B**: Hidden by default, shown on hover/help button
 - **Option C**: Not shown (rely on README/documentation)
@@ -123,7 +141,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 10. Progress Indicator Format
+
 **Question**: What format for progress indicator?
+
 - **Option A**: "37 / 500" (current / total)
 - **Option B**: "37 of 500" (more readable)
 - **Option C**: "7% (37/500)" (percentage + numbers)
@@ -136,7 +156,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 11. Confetti/Celebration for Delete Streaks
+
 **Question**: Should we include confetti/celebration for delete streaks?
+
 - **Option A**: Yes, make it fun (matches "fun" goal)
 - **Option B**: No, keep it minimal (matches "calm" goal)
 - **Option C**: Optional, can be toggled
@@ -150,7 +172,9 @@ This document captures questions that need to be answered before beginning imple
 ## Error Handling
 
 ### 12. Error Message Display
+
 **Question**: How should errors be displayed to users?
+
 - **Option A**: Toast notifications (non-blocking)
 - **Option B**: Inline error messages (contextual)
 - **Option C**: Modal dialogs (blocking, for critical errors)
@@ -163,7 +187,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 13. Retry Logic
+
 **Question**: Should we implement automatic retry for failed API calls?
+
 - **Option A**: Yes, with exponential backoff (3 retries)
 - **Option B**: Manual retry button only
 - **Option C**: Both (auto-retry + manual option)
@@ -177,7 +203,9 @@ This document captures questions that need to be answered before beginning imple
 ## Performance & Optimization
 
 ### 14. Image Loading Strategy
+
 **Question**: How should we handle image loading?
+
 - **Option A**: Load current image only (fastest, no preloading)
 - **Option B**: Preload next image (smoother transitions, more bandwidth)
 - **Option C**: Lazy load with intersection observer (balance)
@@ -189,7 +217,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 15. Large Image List Handling
+
 **Question**: How should we handle very large image lists (1000+ images)?
+
 - **Option A**: Load all at once (simple, but slow initial load)
 - **Option B**: Pagination (load in batches, more complex)
 - **Option C**: Virtual scrolling (complex, probably overkill for MVP)
@@ -203,7 +233,9 @@ This document captures questions that need to be answered before beginning imple
 ## Testing & Development
 
 ### 16. Local OAuth Testing
+
 **Question**: How should we test OAuth flow locally?
+
 - **Option A**: Use `netlify dev` with local redirect URI
 - **Option B**: Use production redirect URI (requires deployment)
 - **Option C**: Mock OAuth for local development
@@ -215,7 +247,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 17. Test Data Strategy
+
 **Question**: How should we handle test data for development?
+
 - **Option A**: Use real Dropbox account (risky, but realistic)
 - **Option B**: Create test Dropbox account (safer, separate from production)
 - **Option C**: Mock Dropbox API responses (fastest, but less realistic)
@@ -229,7 +263,9 @@ This document captures questions that need to be answered before beginning imple
 ## Deployment & Configuration
 
 ### 18. Netlify Function Timeout
+
 **Question**: What timeout should we configure for Netlify Functions?
+
 - **Option A**: Default (10 seconds)
 - **Option B**: Extended (26 seconds, max for free tier)
 - **Option C**: Per-function configuration
@@ -241,7 +277,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 19. CORS Configuration
+
 **Question**: Do we need CORS configuration?
+
 - **Option A**: No (same origin, Netlify Functions on same domain)
 - **Option B**: Yes (if frontend and functions on different domains)
 - **Option C**: Configure but not needed (future-proofing)
@@ -253,7 +291,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 20. Environment Variable Validation
+
 **Question**: Should we validate environment variables on startup?
+
 - **Option A**: Yes, fail fast if missing (better error messages)
 - **Option B**: No, let functions fail naturally (simpler)
 - **Option C**: Validate in each function (defensive)
@@ -267,7 +307,9 @@ This document captures questions that need to be answered before beginning imple
 ## Security
 
 ### 21. Security Event Logging
+
 **Question**: How should we log security events (unauthorized access, token validation failures)?
+
 - **Option A**: Console.log (simple, visible in Netlify logs)
 - **Option B**: Structured logging service (e.g., Sentry, LogRocket)
 - **Option C**: Netlify Functions logs only (built-in)
@@ -279,7 +321,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 22. Rate Limiting
+
 **Question**: Should we implement rate limiting?
+
 - **Option A**: No (rely on Dropbox API rate limits)
 - **Option B**: Yes, per IP (prevent abuse)
 - **Option C**: Yes, per user (more complex, probably overkill for single-user)
@@ -293,7 +337,9 @@ This document captures questions that need to be answered before beginning imple
 ## Folder Selection & Discovery
 
 ### 23. Single vs Multiple Folders (MVP)
+
 **Question**: Should users be able to select multiple folders for one session?
+
 - **Option A**: Single folder only (simpler, faster to build)
 - **Option B**: Multiple folders (combine into one queue, more complex)
 - **Option C**: Single folder per session, but can change folder for next session
@@ -305,7 +351,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 24. Folder Discovery Depth & Limits
+
 **Question**: How deep should we scan and how many folders?
+
 - **Option A**: 2-3 levels deep, max 50 folders (fast)
 - **Option B**: 3-4 levels deep, max 100 folders (balanced)
 - **Option C**: 4-5 levels deep, no limit (comprehensive but slow)
@@ -317,7 +365,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 25. Folder Discovery Caching
+
 **Question**: Should we cache folder discovery results?
+
 - **Option A**: No caching (always fresh, but slower)
 - **Option B**: Cache for 1 hour (good balance)
 - **Option C**: Cache until manual refresh (faster, but may be stale)
@@ -329,7 +379,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 26. Folder Selection Persistence
+
 **Question**: How should we store the selected folder?
+
 - **Option A**: localStorage only (simple, single device)
 - **Option B**: Server-side (KV/database) for multi-device sync
 - **Option C**: Both (localStorage + optional server sync)
@@ -341,7 +393,9 @@ This document captures questions that need to be answered before beginning imple
 ---
 
 ### 27. Can User Change Folder Mid-Session?
+
 **Question**: Should users be able to switch folders during an active session?
+
 - **Option A**: No, must complete or abandon current session (simpler)
 - **Option B**: Yes, can switch anytime (more flexible, more complex)
 - **Option C**: Yes, but only at session boundaries (compromise)
@@ -355,45 +409,26 @@ This document captures questions that need to be answered before beginning imple
 ## Summary of Critical Decisions Needed
 
 **Before Phase 1:**
+
 - None (setup phase, no critical decisions)
 
 **Before Phase 2 (OAuth):**
+
 1. ✅ Refresh token storage mechanism (env var vs KV)
 2. ✅ OAuth state storage (cookie vs session)
 3. ✅ OAuth callback error handling (redirect vs JSON)
 
-**Before Phase 2.5 (Folder Discovery):**
-23. ✅ Single vs multiple folders (MVP decision)
-24. ✅ Folder discovery depth and limits
-25. ✅ Folder discovery caching strategy
-26. ✅ Folder selection persistence method
-27. ✅ Can user change folder mid-session?
+**Before Phase 2.5 (Folder Discovery):** 23. ✅ Single vs multiple folders (MVP decision) 24. ✅ Folder discovery depth and limits 25. ✅ Folder discovery caching strategy 26. ✅ Folder selection persistence method 27. ✅ Can user change folder mid-session?
 
-**Before Phase 3 (API Functions):**
-4. ✅ Token caching strategy (TTL, invalidation)
-5. ✅ Account ID storage with tokens
-6. ✅ Environment variable validation approach
+**Before Phase 3 (API Functions):** 4. ✅ Token caching strategy (TTL, invalidation) 5. ✅ Account ID storage with tokens 6. ✅ Environment variable validation approach
 
-**Before Phase 5 (Frontend):**
-7. ✅ Session state persistence (yes/no/partial)
-8. ✅ Session ID format (UUID vs timestamp)
-9. ✅ Image display size
-10. ✅ Keyboard shortcut display
-11. ✅ Progress indicator format
-12. ✅ Confetti/celebration (yes/no/optional)
+**Before Phase 5 (Frontend):** 7. ✅ Session state persistence (yes/no/partial) 8. ✅ Session ID format (UUID vs timestamp) 9. ✅ Image display size 10. ✅ Keyboard shortcut display 11. ✅ Progress indicator format 12. ✅ Confetti/celebration (yes/no/optional)
 
-**Before Phase 7 (Error Handling):**
-13. ✅ Error message display method
-14. ✅ Retry logic (auto vs manual vs both)
+**Before Phase 7 (Error Handling):** 13. ✅ Error message display method 14. ✅ Retry logic (auto vs manual vs both)
 
-**Before Phase 8 (Testing):**
-15. ✅ Local OAuth testing setup
-16. ✅ Test data strategy
+**Before Phase 8 (Testing):** 15. ✅ Local OAuth testing setup 16. ✅ Test data strategy
 
-**Before Phase 9 (Deployment):**
-17. ✅ Netlify function timeout configuration
-18. ✅ CORS configuration (if needed)
-19. ✅ Security event logging method
+**Before Phase 9 (Deployment):** 17. ✅ Netlify function timeout configuration 18. ✅ CORS configuration (if needed) 19. ✅ Security event logging method
 
 ---
 

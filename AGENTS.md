@@ -43,17 +43,17 @@ docs/                  # BUILD_NOTES, SETUP_GUIDE, DECISIONS, ACCESSIBILITY_TEST
 
 ## Commands
 
-| Command | Purpose |
-|--------|---------|
-| `npm run dev` | Vite dev server (frontend only) |
+| Command                 | Purpose                                           |
+| ----------------------- | ------------------------------------------------- |
+| `npm run dev`           | Vite dev server (frontend only)                   |
 | `npm run dev:functions` | Netlify dev (frontend + functions; use for OAuth) |
-| `npm run build` | Typecheck functions, then Vite build |
-| `npm run typecheck` | TS check app + functions |
-| `npm test` | Run all Vitest tests |
-| `npm run test:a11y` | Run only `src/test/a11y` |
-| `npm run test:watch` | Vitest watch mode |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier write |
+| `npm run build`         | Typecheck functions, then Vite build              |
+| `npm run typecheck`     | TS check app + functions                          |
+| `npm test`              | Run all Vitest tests                              |
+| `npm run test:a11y`     | Run only `src/test/a11y`                          |
+| `npm run test:watch`    | Vitest watch mode                                 |
+| `npm run lint`          | ESLint                                            |
+| `npm run format`        | Prettier write                                    |
 
 ---
 
@@ -69,6 +69,8 @@ docs/                  # BUILD_NOTES, SETUP_GUIDE, DECISIONS, ACCESSIBILITY_TEST
 ## Important docs
 
 - **Setup / run locally**: `docs/SETUP_GUIDE.md`
+- **Deploy / env checklist**: `docs/DEPLOYMENT.md`
+- **Testing & polish (Phase 8)**: `docs/TESTING_AND_POLISH.md` — security, manual testing, test data
 - **Design / product**: `docs/BUILD_NOTES.md`, `docs/DECISIONS.md`, `docs/USER_FLOW.md`
 - **Design tokens**: `docs/COLOR_PALETTE.md`
 - **Accessibility tests**: `docs/ACCESSIBILITY_TESTING.md`
@@ -88,4 +90,4 @@ docs/                  # BUILD_NOTES, SETUP_GUIDE, DECISIONS, ACCESSIBILITY_TEST
 ## Netlify / env
 
 - Required env vars are in `.env.example`; copy to `.env` locally.
-- Production: set same vars in Netlify (Site configuration → Environment variables). See `docs/SETUP_GUIDE.md` and `docs/WHILE_WAITING_FOR_DNS.md` for OAuth and DNS.
+- Production: set same vars in Netlify (Site configuration → Environment variables). See `docs/SETUP_GUIDE.md` and `docs/DEPLOYMENT.md` for setup and deploy; `docs/WHILE_WAITING_FOR_DNS.md` for OAuth and DNS.

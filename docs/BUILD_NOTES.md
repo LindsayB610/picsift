@@ -10,6 +10,7 @@ Primary goals: fun, fast, undo-safe, and actually useful.
 The app presents photos one at a time, in random order, and lets the user quickly decide to keep or delete them.
 
 Key constraints:
+
 - Built for personal use
 - Uses Dropbox (not Google Photos)
 - Undo is required (no irreversible deletes on first action)
@@ -25,7 +26,7 @@ Key constraints:
 - Backend: Netlify Functions
 - Auth: Dropbox OAuth (single-user)
 - Source folder: /Camera Uploads
-- Quarantine folder: /_TRASHME/<sessionId>/... (top-level)
+- Quarantine folder: /\_TRASHME/<sessionId>/... (top-level)
 - Delete behavior: Move to quarantine (not permanent delete)
 - Undo behavior: Move back to original path
 - Permanent delete: Optional, manual or via later "Purge session"
@@ -51,11 +52,13 @@ Key constraints:
 Never hard-delete on first action.
 
 Instead:
-- "Delete" = move_v2 to /_TRASHME/<sessionId>/...
+
+- "Delete" = move_v2 to /\_TRASHME/<sessionId>/...
 - Undo = move_v2 back to original path
 - Dropbox trash / recovery still applies as an extra safety net
 
 Optional later feature:
+
 - "Purge this session" → delete_v2 on quarantined paths
 
 ---
@@ -84,7 +87,7 @@ In the Dropbox App Console:
 2. Access type: Scoped access
 3. Permissions: Full Dropbox
 4. Redirect URI:
-    https://<subdomain>.lindsaybrunner.com/auth/callback
+   https://<subdomain>.lindsaybrunner.com/auth/callback
 
 5. Required scopes:
    - files.metadata.read
@@ -153,7 +156,8 @@ File: src/types.ts
 
 ## Netlify Functions (Responsibilities)
 
-### _dropbox.ts
+### \_dropbox.ts
+
 Shared helper for calling Dropbox HTTP API.
 
     export async function dbx<T>(
@@ -180,6 +184,7 @@ Shared helper for calling Dropbox HTTP API.
 ---
 
 ### list.ts
+
 - Input: { path: "/Camera Uploads", limit?: number }
 - Behavior:
   - Call files/list_folder
@@ -190,6 +195,7 @@ Shared helper for calling Dropbox HTTP API.
 ---
 
 ### temp_link.ts
+
 - Input: { path: string }
 - Output: { link: string }
 - Uses files/get_temporary_link
@@ -197,16 +203,18 @@ Shared helper for calling Dropbox HTTP API.
 ---
 
 ### trash.ts
+
 - Input: { path: string, sessionId: string }
 - Behavior:
   - Compute destination:
-      /_TRASHME/<sessionId><original_path>
+    /\_TRASHME/<sessionId><original_path>
   - Call files/move_v2 with autorename: true
 - Output: TrashRecord
 
 ---
 
 ### undo.ts
+
 - Input: { trashed_path: string, original_path: string }
 - Behavior:
   - Move file back using files/move_v2
@@ -214,6 +222,7 @@ Shared helper for calling Dropbox HTTP API.
 ---
 
 ### purge.ts (optional)
+
 - Input: { paths: string[] }
 - Behavior:
   - Permanently delete using files/delete_v2
@@ -242,6 +251,7 @@ Shared helper for calling Dropbox HTTP API.
 Single-user app.
 
 Simplest approach:
+
 - Complete OAuth once
 - Store refresh token securely (Netlify env var / KV / Blob)
 - Netlify Functions mint access tokens as needed
@@ -256,12 +266,14 @@ No user accounts, no multi-user logic.
 **App name:** PicSift
 
 Rationale:
+
 - Short, friendly, and memorable
 - Immediately communicates "photos + curation"
 - Feels playful without being cutesy or technical
 - Fits naturally alongside other personal tools/projects
 
 Optional supporting copy (non-binding):
+
 - One-liner: "A calm way to sift through your photos, one decision at a time."
 - Alternate micro-tagline: "Keep what matters. Let the rest go."
 

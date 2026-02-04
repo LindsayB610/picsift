@@ -5,6 +5,7 @@ You're waiting for DNS to propagate for `picsift.lindsaybrunner.com`. While that
 ---
 
 ## ✅ You've Already Done:
+
 - ✅ Created your Dropbox app
 - ✅ Configured OAuth redirect URIs
 - ✅ Set up Netlify and connected your GitHub repo
@@ -165,6 +166,7 @@ When DNS has propagated and your custom domain is working:
 ## Quick Checklist:
 
 While waiting for DNS, you can complete:
+
 - [ ] Get App Key and App Secret from Dropbox
 - [ ] Create local `.env` file
 - [ ] Test authentication locally
@@ -174,6 +176,7 @@ While waiting for DNS, you can complete:
 - [ ] Test local folder discovery
 
 Once DNS is ready:
+
 - [ ] Verify site is accessible
 - [ ] Set up Netlify environment variables
 - [ ] Trigger new deployment
@@ -184,6 +187,7 @@ Once DNS is ready:
 ## Need Help?
 
 If you run into issues:
+
 - Check the main SETUP_GUIDE.md for detailed instructions
 - Check browser console (F12) for errors
 - Check terminal output for server errors

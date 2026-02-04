@@ -8,14 +8,14 @@
  */
 export function normalizeError(err: unknown): string {
   if (err instanceof Error) return err.message;
-  if (typeof err === 'string') return err;
+  if (typeof err === "string") return err;
   if (
     err != null &&
-    typeof err === 'object' &&
-    'message' in err &&
-    typeof (err as { message: unknown }).message === 'string'
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as { message: unknown }).message === "string"
   ) {
     return (err as { message: string }).message;
   }
-  return 'Something went wrong. Please try again.';
+  return "Something went wrong. Please try again.";
 }

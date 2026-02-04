@@ -2,9 +2,9 @@
  * React Query hooks for authentication
  */
 
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { startAuth, checkAuthCallback } from '../api';
-import type { AuthStartResponse, AuthCallbackResponse } from '../types';
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { startAuth, checkAuthCallback } from "../api";
+import type { AuthStartResponse, AuthCallbackResponse } from "../types";
 
 /**
  * Hook to start OAuth flow
@@ -23,12 +23,12 @@ export function useStartAuth() {
  */
 export function useAuthCallback(code: string | null, state: string | null) {
   return useQuery({
-    queryKey: ['auth', 'callback', code, state],
+    queryKey: ["auth", "callback", code, state],
     queryFn: async (): Promise<AuthCallbackResponse> => {
       if (!code || !state) {
         return {
           success: false,
-          error: 'Missing authorization code or state',
+          error: "Missing authorization code or state",
         };
       }
       return await checkAuthCallback();

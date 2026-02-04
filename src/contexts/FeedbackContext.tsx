@@ -11,7 +11,7 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from 'react';
+} from "react";
 
 const TOAST_DURATION_MS = 5000;
 
@@ -44,7 +44,7 @@ interface FeedbackContextValue {
   showCriticalModal: (
     message: string,
     title?: string,
-    onClose?: () => void,
+    onClose?: () => void
   ) => void;
   closeCriticalModal: () => void;
 }
@@ -54,14 +54,16 @@ const FeedbackContext = createContext<FeedbackContextValue | null>(null);
 export function useFeedback(): FeedbackContextValue {
   const ctx = useContext(FeedbackContext);
   if (ctx == null) {
-    throw new Error('useFeedback must be used within FeedbackProvider');
+    throw new Error("useFeedback must be used within FeedbackProvider");
   }
   return ctx;
 }
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [criticalModal, setCriticalModal] = useState<CriticalModalState | null>(null);
+  const [criticalModal, setCriticalModal] = useState<CriticalModalState | null>(
+    null
+  );
 
   const showToast = useCallback((message: string, options?: ToastOptions) => {
     const id = crypto.randomUUID();
@@ -85,10 +87,10 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showCriticalModal = useCallback(
-    (message: string, title = 'Error', onCloseCallback?: () => void) => {
+    (message: string, title = "Error", onCloseCallback?: () => void) => {
       setCriticalModal({ title, message, onCloseCallback });
     },
-    [],
+    []
   );
 
   const closeCriticalModal = useCallback(() => {
@@ -111,7 +113,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       criticalModal,
       showCriticalModal,
       closeCriticalModal,
-    ],
+    ]
   );
 
   return (
@@ -146,27 +148,27 @@ function ToastList({
       role="region"
       aria-label="Notifications"
       style={{
-        position: 'fixed',
-        bottom: 'var(--page-padding-bottom)',
-        left: 'var(--page-padding)',
-        right: 'var(--page-padding-right)',
+        position: "fixed",
+        bottom: "var(--page-padding-bottom)",
+        left: "var(--page-padding)",
+        right: "var(--page-padding-right)",
         zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem',
-        pointerEvents: 'none',
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.5rem",
+        pointerEvents: "none",
       }}
     >
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem',
-          alignItems: 'stretch',
-          maxWidth: 'var(--content-max)',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          pointerEvents: 'auto',
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.5rem",
+          alignItems: "stretch",
+          maxWidth: "var(--content-max)",
+          marginLeft: "auto",
+          marginRight: "auto",
+          pointerEvents: "auto",
         }}
       >
         {toasts.map((t) => (
@@ -189,20 +191,20 @@ function ToastItemView({
       className="feedback-toast"
       role="alert"
       style={{
-        padding: '0.75rem 1rem',
-        backgroundColor: 'var(--bg-elevated)',
-        border: '1px solid var(--error-border)',
-        borderRadius: '8px',
-        color: 'var(--error-text)',
-        fontSize: '0.9375rem',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        flexWrap: 'wrap',
+        padding: "0.75rem 1rem",
+        backgroundColor: "var(--bg-elevated)",
+        border: "1px solid var(--error-border)",
+        borderRadius: "8px",
+        color: "var(--error-text)",
+        fontSize: "0.9375rem",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.75rem",
+        flexWrap: "wrap",
       }}
     >
-      <span style={{ flex: '1 1 auto', minWidth: 0 }}>{toast.message}</span>
+      <span style={{ flex: "1 1 auto", minWidth: 0 }}>{toast.message}</span>
       {toast.retry && (
         <button
           type="button"
@@ -212,18 +214,18 @@ function ToastItemView({
             onDismiss(toast.id);
           }}
           style={{
-            flex: '0 0 auto',
-            fontSize: '0.875rem',
+            flex: "0 0 auto",
+            fontSize: "0.875rem",
             fontWeight: 600,
-            backgroundColor: 'var(--accent)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            padding: '0.375rem 0.75rem',
+            backgroundColor: "var(--accent)",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            padding: "0.375rem 0.75rem",
           }}
         >
-          {toast.retryLabel ?? 'Retry'}
+          {toast.retryLabel ?? "Retry"}
         </button>
       )}
       <button
@@ -231,13 +233,13 @@ function ToastItemView({
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss"
         style={{
-          flex: '0 0 auto',
-          padding: '0.25rem',
-          background: 'none',
-          border: 'none',
-          color: 'var(--text)',
-          cursor: 'pointer',
-          fontSize: '1.25rem',
+          flex: "0 0 auto",
+          padding: "0.25rem",
+          background: "none",
+          border: "none",
+          color: "var(--text)",
+          cursor: "pointer",
+          fontSize: "1.25rem",
           lineHeight: 1,
         }}
       >
@@ -258,10 +260,10 @@ function CriticalModal({
 }) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   return (
@@ -272,14 +274,14 @@ function CriticalModal({
       aria-labelledby="feedback-modal-title"
       aria-describedby="feedback-modal-desc"
       style={{
-        position: 'fixed',
+        position: "fixed",
         inset: 0,
         zIndex: 2000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--page-padding)',
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "var(--page-padding)",
+        backgroundColor: "rgba(0,0,0,0.7)",
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -288,24 +290,24 @@ function CriticalModal({
       <div
         className="feedback-modal"
         style={{
-          maxWidth: '420px',
-          width: '100%',
-          padding: '1.5rem',
-          backgroundColor: 'var(--bg-elevated)',
-          border: '1px solid var(--error-border)',
-          borderRadius: '12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          maxWidth: "420px",
+          width: "100%",
+          padding: "1.5rem",
+          backgroundColor: "var(--bg-elevated)",
+          border: "1px solid var(--error-border)",
+          borderRadius: "12px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <h2
           id="feedback-modal-title"
           style={{
-            margin: '0 0 0.75rem 0',
-            fontFamily: 'var(--sans)',
-            fontSize: '1.25rem',
+            margin: "0 0 0.75rem 0",
+            fontFamily: "var(--sans)",
+            fontSize: "1.25rem",
             fontWeight: 600,
-            color: 'var(--error-text)',
+            color: "var(--error-text)",
           }}
         >
           {title}
@@ -314,27 +316,27 @@ function CriticalModal({
           id="feedback-modal-desc"
           style={{
             margin: 0,
-            color: 'var(--text)',
-            fontSize: '0.9375rem',
+            color: "var(--text)",
+            fontSize: "0.9375rem",
             lineHeight: 1.5,
           }}
         >
           {message}
         </p>
-        <div style={{ marginTop: '1.25rem' }}>
+        <div style={{ marginTop: "1.25rem" }}>
           <button
             type="button"
             className="touch-target-inline"
             onClick={onClose}
             style={{
-              width: '100%',
-              fontSize: '1rem',
+              width: "100%",
+              fontSize: "1rem",
               fontWeight: 600,
-              backgroundColor: 'var(--accent)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
+              backgroundColor: "var(--accent)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
             }}
           >
             OK

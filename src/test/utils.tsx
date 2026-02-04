@@ -24,16 +24,14 @@ function AllTheProviders({ children }: AllTheProvidersProps): ReactElement {
   const client = createTestQueryClient();
   return (
     <QueryClientProvider client={client}>
-      <FeedbackProvider>
-        {children}
-      </FeedbackProvider>
+      <FeedbackProvider>{children}</FeedbackProvider>
     </QueryClientProvider>
   );
 }
 
 function customRender(
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper">,
+  options?: Omit<RenderOptions, "wrapper">
 ): ReturnType<typeof render> {
   return render(ui, {
     wrapper: AllTheProviders,

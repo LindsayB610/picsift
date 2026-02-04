@@ -1,13 +1,13 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import './index.css'
-import App from './App'
-import { FeedbackProvider } from './contexts/FeedbackContext'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import "./index.css";
+import App from "./App";
+import { FeedbackProvider } from "./contexts/FeedbackContext";
 
-const root = document.getElementById('root')
+const root = document.getElementById("root");
 if (root == null) {
-  throw new Error('Root element #root not found')
+  throw new Error("Root element #root not found");
 }
 
 // Create a client with sensible defaults
@@ -20,7 +20,7 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
     },
   },
-})
+});
 
 createRoot(root).render(
   <StrictMode>
@@ -29,5 +29,5 @@ createRoot(root).render(
         <App />
       </FeedbackProvider>
     </QueryClientProvider>
-  </StrictMode>,
-)
+  </StrictMode>
+);

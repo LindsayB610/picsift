@@ -7,16 +7,19 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 ### TSConfig Files
 
 **Current Structure:**
+
 - `tsconfig.json` - Root with project references
 - `tsconfig.app.json` - App code configuration
 - `tsconfig.node.json` - Node tooling configuration
 - `tsconfig.functions.json` - Netlify functions configuration
 
 **Missing:**
+
 - `tsconfig.base.json` - Shared base configuration
 - `tsconfig.eslint.json` - ESLint type-checking configuration
 
 **Current Issues:**
+
 1. No shared base config - settings duplicated across files
 2. Missing critical compiler options:
    - `noUncheckedIndexedAccess` - Not enabled
@@ -31,6 +34,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 ### ESLint Configuration
 
 **Current State:**
+
 - Uses `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser`
 - Has `consistent-type-imports` rule enabled ✅
 - Uses `project` option (not `projectService`)
@@ -41,6 +45,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 - Not using `recommendedTypeChecked` config
 
 **Issues:**
+
 1. Not using `projectService: true` (better performance)
 2. Missing critical type-checked rules
 3. Test files have `no-explicit-any` disabled (acceptable for tests)
@@ -80,6 +85,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 **Goal:** Create proper TSConfig structure with all required compiler options.
 
 **Tasks:**
+
 1. ✅ Create `tsconfig.base.json` with all required compiler options
 2. ✅ Update `tsconfig.app.json` to extend base and add app-specific settings
 3. ✅ Update `tsconfig.node.json` to extend base
@@ -88,11 +94,13 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 6. ✅ Update root `tsconfig.json` if needed
 
 **Expected Impact:**
+
 - Type checking will become stricter
 - Many existing code patterns will need fixes
 - This is intentional - we want to catch bugs
 
 **Breaking Changes:**
+
 - `noUncheckedIndexedAccess` will require undefined checks for all index access
 - `exactOptionalPropertyTypes` will prevent `prop = undefined` patterns
 - `verbatimModuleSyntax` will require `import type` for type-only imports
@@ -102,6 +110,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 **Goal:** Enable typed linting with all required rules.
 
 **Tasks:**
+
 1. ✅ Update ESLint config to use `projectService: true`
 2. ✅ Add `recommendedTypeChecked` config
 3. ✅ Enable `@typescript-eslint/no-floating-promises`
@@ -110,6 +119,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 6. ✅ Update `tsconfig.eslint.json` to include all files ESLint touches
 
 **Expected Impact:**
+
 - ESLint will catch more type-related bugs
 - Initial lint run will show many violations
 - These need to be fixed incrementally
@@ -119,6 +129,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 **Goal:** Fix code patterns that violate the new standards.
 
 **Tasks:**
+
 1. **Index Access Fixes:**
    - Audit all index access patterns (`obj[key]`, `array[i]`)
    - Add undefined checks where needed
@@ -139,6 +150,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
    - Document intentional fire-and-forget cases
 
 **Expected Impact:**
+
 - Many files will need changes
 - This is the bulk of the migration work
 - Should be done incrementally by module/component
@@ -148,6 +160,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 **Goal:** Improve type safety in domain logic.
 
 **Tasks:**
+
 1. **Boundary Validation:**
    - Audit all external inputs (fetch, localStorage, user input)
    - Add validation/narrowing at boundaries
@@ -167,6 +180,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
    - Replace with proper types or `unknown` + validation
 
 **Expected Impact:**
+
 - Better type safety throughout the codebase
 - Fewer runtime bugs
 - More maintainable code
@@ -176,6 +190,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 **Goal:** Ensure all tests pass and type checking works.
 
 **Tasks:**
+
 1. ✅ Run `npm run typecheck` and fix all errors
 2. ✅ Run `npm run lint` and fix all errors
 3. ✅ Run `npm run test` and fix any test failures
@@ -183,6 +198,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 5. ✅ Update test utilities if needed for new type requirements
 
 **Expected Impact:**
+
 - All type checks pass
 - All linting passes
 - All tests pass
@@ -192,6 +208,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 **Goal:** Document the standards and ensure team understanding.
 
 **Tasks:**
+
 1. ✅ Update `agents.md` with TypeScript standards (already done)
 2. ✅ Create this alignment plan document (already done)
 3. ✅ Document any project-specific patterns or exceptions
@@ -204,11 +221,13 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 **Recommended:** Enable standards incrementally to avoid massive breaking changes.
 
 **Option 1: Big Bang (Not Recommended)**
+
 - Enable all options at once
 - Fix all issues in one PR
 - High risk, hard to review
 
 **Option 2: Incremental by Option (Recommended)**
+
 1. Enable `verbatimModuleSyntax` first (easiest, mostly auto-fixable)
 2. Enable `useUnknownInCatchVariables` (small impact, clear fixes)
 3. Enable `exactOptionalPropertyTypes` (medium impact)
@@ -216,6 +235,7 @@ This document outlines the plan to bring the PicSift codebase in line with produ
 5. Enable ESLint typed rules one at a time
 
 **Option 3: Incremental by Module (Alternative)**
+
 - Enable all options
 - Fix one module/component at a time
 - Use `// @ts-expect-error` temporarily with TODO comments

@@ -3,10 +3,10 @@
  * Phase 7: normalized error display
  */
 
-import { useEffect, useState } from 'react';
-import { useTempLink } from '../hooks/useTempLink';
-import { normalizeError } from '../utils/error';
-import type { DbxEntry } from '../types';
+import { useEffect, useState } from "react";
+import { useTempLink } from "../hooks/useTempLink";
+import { normalizeError } from "../utils/error";
+import type { DbxEntry } from "../types";
 
 export interface ViewerProps {
   /** Current image entry to display */
@@ -49,18 +49,18 @@ export default function Viewer({
       <div
         className="viewer-placeholder"
         style={{
-          width: '100%',
-          aspectRatio: '4/3',
-          maxHeight: '60vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'var(--bg-elevated)',
-          borderRadius: '12px',
-          border: '1px solid var(--border)',
+          width: "100%",
+          aspectRatio: "4/3",
+          maxHeight: "60vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "var(--bg-elevated)",
+          borderRadius: "12px",
+          border: "1px solid var(--border)",
         }}
       >
-        <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.9375rem' }}>
+        <p style={{ color: "var(--text)", margin: 0, fontSize: "0.9375rem" }}>
           No image
         </p>
       </div>
@@ -72,18 +72,18 @@ export default function Viewer({
       <div
         className="viewer-loading"
         style={{
-          width: '100%',
-          aspectRatio: '4/3',
-          maxHeight: '60vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'var(--bg-elevated)',
-          borderRadius: '12px',
-          border: '1px solid var(--border)',
+          width: "100%",
+          aspectRatio: "4/3",
+          maxHeight: "60vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "var(--bg-elevated)",
+          borderRadius: "12px",
+          border: "1px solid var(--border)",
         }}
       >
-        <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.9375rem' }}>
+        <p style={{ color: "var(--text)", margin: 0, fontSize: "0.9375rem" }}>
           Loading…
         </p>
       </div>
@@ -95,26 +95,26 @@ export default function Viewer({
       <div
         className="viewer-error"
         style={{
-          width: '100%',
-          aspectRatio: '4/3',
-          maxHeight: '60vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          padding: '1rem',
-          backgroundColor: 'var(--bg-elevated)',
-          borderRadius: '12px',
-          border: '1px solid var(--error-border)',
+          width: "100%",
+          aspectRatio: "4/3",
+          maxHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.5rem",
+          padding: "1rem",
+          backgroundColor: "var(--bg-elevated)",
+          borderRadius: "12px",
+          border: "1px solid var(--error-border)",
         }}
       >
         <p
           style={{
-            color: 'var(--error-text)',
+            color: "var(--error-text)",
             margin: 0,
-            fontSize: '0.9375rem',
-            textAlign: 'center',
+            fontSize: "0.9375rem",
+            textAlign: "center",
           }}
         >
           Failed to load image
@@ -122,17 +122,17 @@ export default function Viewer({
         {(currentErrorDetail != null || imageLoadError) && (
           <p
             style={{
-              color: 'var(--text)',
+              color: "var(--text)",
               margin: 0,
-              fontSize: '0.8125rem',
-              textAlign: 'center',
+              fontSize: "0.8125rem",
+              textAlign: "center",
             }}
           >
             {imageLoadError
-              ? 'Image could not be displayed'
+              ? "Image could not be displayed"
               : currentErrorDetail != null
                 ? normalizeError(currentErrorDetail)
-                : ''}
+                : ""}
           </p>
         )}
       </div>
@@ -143,27 +143,27 @@ export default function Viewer({
     <div
       className="viewer-image-wrap"
       style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        maxHeight: '60vh',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        backgroundColor: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        maxHeight: "60vh",
+        borderRadius: "12px",
+        overflow: "hidden",
+        backgroundColor: "var(--bg-elevated)",
+        border: "1px solid var(--border)",
       }}
     >
       <img
         src={currentUrl}
         alt={currentEntry.name}
         style={{
-          maxWidth: '100%',
-          maxHeight: '60vh',
-          width: 'auto',
-          height: 'auto',
-          objectFit: 'contain',
-          display: 'block',
+          maxWidth: "100%",
+          maxHeight: "60vh",
+          width: "auto",
+          height: "auto",
+          objectFit: "contain",
+          display: "block",
         }}
         loading="eager"
         decoding="async"

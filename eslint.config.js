@@ -44,12 +44,16 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       // Type-checked rules (require type info; only applied to ts/tsx with projectService above)
-      ...(tseslintRaw.flatConfigs["flat/recommended-type-checked"][2]?.rules ?? {}),
+      ...(tseslintRaw.flatConfigs["flat/recommended-type-checked"][2]?.rules ??
+        {}),
       ...reactPlugin.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       "no-undef": "off",
       "@typescript-eslint/consistent-type-imports": "error",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_" },
+      ],
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/switch-exhaustiveness-check": "error",

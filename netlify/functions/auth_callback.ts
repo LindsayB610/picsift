@@ -4,10 +4,10 @@
  * and enforces access control
  */
 
-import { Dropbox } from 'dropbox';
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { normalizeError } from './_utils';
+import { Dropbox } from "dropbox";
+import { readFileSync, writeFileSync } from "fs";
+import { join } from "path";
+import { normalizeError } from "./_utils";
 
 type HandlerEvent = {
   httpMethod: string;
@@ -32,8 +32,8 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
     return cookies;
   }
 
-  cookieHeader.split(';').forEach((cookie) => {
-    const [name, value] = cookie.trim().split('=');
+  cookieHeader.split(";").forEach((cookie) => {
+    const [name, value] = cookie.trim().split("=");
     if (name && value) {
       cookies[name] = decodeURIComponent(value);
     }
@@ -60,9 +60,7 @@ function getState(event: HandlerEvent): string | undefined {
 /**
  * Exchange authorization code for tokens
  */
-async function exchangeCodeForTokens(
-  code: string,
-): Promise<{
+async function exchangeCodeForTokens(code: string): Promise<{
   access_token: string;
   refresh_token: string;
   account_id: string;
@@ -73,17 +71,19 @@ async function exchangeCodeForTokens(
   const redirectUri = getRedirectUri();
 
   if (!appKey || !appSecret) {
-    throw new Error('DROPBOX_APP_KEY and DROPBOX_APP_SECRET must be configured');
+    throw new Error(
+      "DROPBOX_APP_KEY and DROPBOX_APP_SECRET must be configured"
+    );
   }
 
-  const response = await fetch('https://api.dropbox.com/oauth2/token', {
-    method: 'POST',
+  const response = await fetch("https://api.dropbox.com/oauth2/token", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
       code,
-      grant_type: 'authorization_code',
+      grant_type: "authorization_code",
       client_id: appKey,
       client_secret: appSecret,
       redirect_uri: redirectUri,
@@ -119,9 +119,9 @@ async function exchangeCodeForTokens(
 function getBaseUrl(): string {
   const netlifyUrl = process.env.NETLIFY_URL;
   const siteUrl = process.env.URL;
-  let base = netlifyUrl || siteUrl || 'http://localhost:8888';
-  if (!base.includes('localhost') && base.startsWith('http://')) {
-    base = base.replace(/^http:\/\//i, 'https://');
+  let base = netlifyUrl || siteUrl || "http://localhost:8888";
+  if (!base.includes("localhost") && base.startsWith("http://")) {
+    base = base.replace(/^http:\/\//i, "https://");
   }
   return base;
 }
@@ -142,12 +142,12 @@ function getAppBaseUrl(): string {
   const netlifyUrl = process.env.NETLIFY_URL;
   const siteUrl = process.env.URL;
   // For local development, always redirect to the frontend port (8888)
-  if (!netlifyUrl && (!siteUrl || siteUrl.includes('localhost'))) {
-    return 'http://localhost:8888';
+  if (!netlifyUrl && (!siteUrl || siteUrl.includes("localhost"))) {
+    return "http://localhost:8888";
   }
-  let base = netlifyUrl || siteUrl || 'http://localhost:8888';
-  if (!base.includes('localhost') && base.startsWith('http://')) {
-    base = base.replace(/^http:\/\//i, 'https://');
+  let base = netlifyUrl || siteUrl || "http://localhost:8888";
+  if (!base.includes("localhost") && base.startsWith("http://")) {
+    base = base.replace(/^http:\/\//i, "https://");
   }
   return base;
 }
@@ -158,7 +158,8 @@ function getAppBaseUrl(): string {
 function isAuthorizedAccount(accountId: string, email: string): boolean {
   const authorizedAccountId = process.env.AUTHORIZED_DROPBOX_ACCOUNT_ID;
   const authorizedEmail = process.env.AUTHORIZED_DROPBOX_EMAIL;
-  const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
+  const isLocalDev =
+    !process.env.NETLIFY && process.env.NODE_ENV !== "production";
 
   // In production: require at least one to be set; otherwise reject everyone (fail closed)
   if (!isLocalDev && !authorizedAccountId && !authorizedEmail) {
@@ -184,13 +185,13 @@ function isAuthorizedAccount(accountId: string, email: string): boolean {
 }
 
 export const handler = async (
-  event: HandlerEvent,
+  event: HandlerEvent
 ): Promise<HandlerResponse> => {
-  if (event.httpMethod !== 'GET') {
+  if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method not allowed' }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
 
@@ -203,14 +204,14 @@ export const handler = async (
     const stateParam = event.queryStringParameters?.state;
 
     if (!code) {
-      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent('Missing authorization code')}`;
+      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent("Missing authorization code")}`;
       return { statusCode: 302, headers: { Location: redirectUrl } };
     }
 
     // Validate state parameter (CSRF protection)
     if (!state || !stateParam || state !== stateParam) {
-      console.error('[SECURITY] OAuth state mismatch');
-      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent('Invalid state parameter')}`;
+      console.error("[SECURITY] OAuth state mismatch");
+      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent("Invalid state parameter")}`;
       return { statusCode: 302, headers: { Location: redirectUrl } };
     }
 
@@ -219,69 +220,77 @@ export const handler = async (
       await exchangeCodeForTokens(code);
 
     // Access control check: verify user is authorized
-    // TEMPORARILY DISABLED for local dev to make testing easier
-    // In production, this should be enabled
-    const isLocalDev = !process.env.NETLIFY && process.env.NODE_ENV !== 'production';
+    // Skipped in local dev when AUTHORIZED_* not set (for easier testing)
+    // Always enforced in production
+    const isLocalDev =
+      !process.env.NETLIFY && process.env.NODE_ENV !== "production";
     if (!isAuthorizedAccount(account_id, email) && !isLocalDev) {
       // Only enforce in production
       console.error(
-        `[SECURITY] Unauthorized access attempt: account_id=${account_id}, email=${email}`,
+        `[SECURITY] Unauthorized access attempt: account_id=${account_id}, email=${email}`
       );
-      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent('Access denied. This app is restricted to authorized users only.')}`;
+      const redirectUrl = `${appBase}/?auth=error&message=${encodeURIComponent("Access denied. This app is restricted to authorized users only.")}`;
       return { statusCode: 302, headers: { Location: redirectUrl } };
     }
-    
+
     // In local dev, just log the account info
     if (isLocalDev) {
-      console.log(`[AUTH] Authenticated: account_id=${account_id}, email=${email}`);
+      console.log(
+        `[AUTH] Authenticated: account_id=${account_id}, email=${email}`
+      );
     }
 
     // Clear state cookie (Secure only when on HTTPS)
-    const isSecure = appBase.startsWith('https://');
-    const clearCookieHeader =
-      `picsift_oauth_state=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${isSecure ? '; Secure' : ''}`;
+    const isSecure = appBase.startsWith("https://");
+    const clearCookieHeader = `picsift_oauth_state=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${isSecure ? "; Secure" : ""}`;
 
     // In local dev, automatically update .env file with new tokens
     if (isLocalDev) {
       try {
-        const envPath = join(process.cwd(), '.env');
-        let envContent = readFileSync(envPath, 'utf-8');
-        
+        const envPath = join(process.cwd(), ".env");
+        let envContent = readFileSync(envPath, "utf-8");
+
         // Update DROPBOX_REFRESH_TOKEN
         envContent = envContent.replace(
           /^DROPBOX_REFRESH_TOKEN=.*$/m,
-          `DROPBOX_REFRESH_TOKEN=${refresh_token}`,
+          `DROPBOX_REFRESH_TOKEN=${refresh_token}`
         );
-        
+
         // Update AUTHORIZED_DROPBOX_ACCOUNT_ID
         envContent = envContent.replace(
           /^AUTHORIZED_DROPBOX_ACCOUNT_ID=.*$/m,
-          `AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`,
+          `AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`
         );
-        
-        writeFileSync(envPath, envContent, 'utf-8');
-        console.log('='.repeat(80));
-        console.log('[AUTH] ✅ Automatically updated .env file with new tokens!');
+
+        writeFileSync(envPath, envContent, "utf-8");
+        console.log("=".repeat(80));
+        console.log(
+          "[AUTH] ✅ Automatically updated .env file with new tokens!"
+        );
         console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
         console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
-        console.log('='.repeat(80));
-        console.log('[AUTH] ⚠️  Restart the server to load the new tokens.');
+        console.log("=".repeat(80));
+        console.log("[AUTH] ⚠️  Restart the server to load the new tokens.");
       } catch (envErr: unknown) {
         // If auto-update fails, just log the values
-        console.log('='.repeat(80));
-        console.log('[AUTH] ⚠️  Could not auto-update .env file. Please update manually:');
+        console.log("=".repeat(80));
+        console.log(
+          "[AUTH] ⚠️  Could not auto-update .env file. Please update manually:"
+        );
         console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
         console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
-        console.log('='.repeat(80));
-        console.error('[AUTH] Error updating .env:', envErr);
+        console.log("=".repeat(80));
+        console.error("[AUTH] Error updating .env:", envErr);
       }
     }
 
     // In production: log tokens so you can copy from Netlify function logs (URL fragment is unreliable for long tokens)
     if (!isLocalDev) {
-      console.log('[AUTH] Add these to Netlify → Site configuration → Environment variables, then trigger a new deploy:');
-      console.log('DROPBOX_REFRESH_TOKEN=' + refresh_token);
-      console.log('AUTHORIZED_DROPBOX_ACCOUNT_ID=' + account_id);
+      console.log(
+        "[AUTH] Add these to Netlify → Site configuration → Environment variables, then trigger a new deploy:"
+      );
+      console.log("DROPBOX_REFRESH_TOKEN=" + refresh_token);
+      console.log("AUTHORIZED_DROPBOX_ACCOUNT_ID=" + account_id);
     }
 
     // Redirect to app with success (no token in URL; get token from Netlify → Functions → auth_callback → Logs)
@@ -291,11 +300,11 @@ export const handler = async (
       statusCode: 302,
       headers: {
         Location: redirectUrl,
-        'Set-Cookie': clearCookieHeader,
+        "Set-Cookie": clearCookieHeader,
       },
     };
   } catch (err: unknown) {
-    console.error('OAuth callback error:', err);
+    console.error("OAuth callback error:", err);
     const message = normalizeError(err);
     const redirectUrl = `${getAppBaseUrl()}/?auth=error&message=${encodeURIComponent(message)}`;
     return { statusCode: 302, headers: { Location: redirectUrl } };
