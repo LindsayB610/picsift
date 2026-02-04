@@ -4,6 +4,7 @@
  * Uses files/move_v2 with autorename: true.
  */
 
+import { requireSession } from "./_auth_store";
 import { createDropboxClient } from "./_dropbox";
 import { normalizeError } from "./_utils";
 import type { TrashRecord, TrashResponse } from "../../src/types";
@@ -11,6 +12,7 @@ import type { TrashRecord, TrashResponse } from "../../src/types";
 type HandlerEvent = {
   httpMethod: string;
   path: string;
+  headers?: Record<string, string>;
   body?: string | null;
 };
 
@@ -46,6 +48,9 @@ export const handler = async (
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
+
+  const sessionError = await requireSession(event);
+  if (sessionError) return sessionError as HandlerResponse;
 
   let payload: { path?: string; session_id?: string };
   try {

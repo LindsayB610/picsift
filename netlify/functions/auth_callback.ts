@@ -7,6 +7,12 @@
 import { Dropbox } from "dropbox";
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import {
+  addSessionToAuth,
+  getAuthFromBlob,
+  setAuthInBlob,
+  setSessionCookieHeader,
+} from "./_auth_store";
 import { normalizeError } from "./_utils";
 
 type HandlerEvent = {
@@ -267,40 +273,44 @@ export const handler = async (
         console.log(
           "[AUTH] ✅ Automatically updated .env file with new tokens!"
         );
-        console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
-        console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
-        console.log("=".repeat(80));
         console.log("[AUTH] ⚠️  Restart the server to load the new tokens.");
+        console.log("=".repeat(80));
       } catch (envErr: unknown) {
-        // If auto-update fails, just log the values
-        console.log("=".repeat(80));
-        console.log(
-          "[AUTH] ⚠️  Could not auto-update .env file. Please update manually:"
-        );
-        console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
-        console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
-        console.log("=".repeat(80));
         console.error("[AUTH] Error updating .env:", envErr);
       }
     }
 
-    // In production: log tokens so you can copy from Netlify function logs (URL fragment is unreliable for long tokens)
+    // In production: store token and set session cookie. Support multiple devices (phone + desktop).
+    // If same account already has a session, add this device's session; otherwise set token and first session.
+    let cookieToSet = clearCookieHeader;
     if (!isLocalDev) {
-      console.log(
-        "[AUTH] Add these to Netlify → Site configuration → Environment variables, then trigger a new deploy:"
-      );
-      console.log("DROPBOX_REFRESH_TOKEN=" + refresh_token);
-      console.log("AUTHORIZED_DROPBOX_ACCOUNT_ID=" + account_id);
+      const existing = await getAuthFromBlob();
+      const isSameAccount = existing?.account_id === account_id;
+      const sessionSecret = isSameAccount
+        ? await addSessionToAuth(account_id, refresh_token)
+        : await setAuthInBlob(refresh_token, account_id);
+      if (isSameAccount) {
+        console.log("[AUTH] New device session added for account_id:", account_id);
+      } else {
+        console.log("[AUTH] Token updated for account_id:", account_id);
+      }
+      if (sessionSecret) {
+        cookieToSet = setSessionCookieHeader(
+          sessionSecret,
+          isSecure,
+          30 * 24 * 60 * 60
+        ); // 30 days
+      }
     }
 
-    // Redirect to app with success (no token in URL; get token from Netlify → Functions → auth_callback → Logs)
+    // Redirect to app with success (no token in URL)
     const redirectUrl = `${appBase}/?auth=success&account_id=${encodeURIComponent(account_id)}`;
 
     return {
       statusCode: 302,
       headers: {
         Location: redirectUrl,
-        "Set-Cookie": clearCookieHeader,
+        "Set-Cookie": cookieToSet,
       },
     };
   } catch (err: unknown) {

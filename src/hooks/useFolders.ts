@@ -17,5 +17,6 @@ export function useDiscoverFolders(maxDepth: number = 3) {
     },
     staleTime: 60 * 60 * 1000, // Cache for 1 hour (folders don't change often)
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    retry: false, // Fail fast so user sees token/reauth instructions instead of long "hang"
   });
 }

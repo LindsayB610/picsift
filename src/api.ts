@@ -86,6 +86,17 @@ export async function startAuth(): Promise<AuthStartResponse> {
 }
 
 /**
+ * Logout: clear server-side stored token and session cookie.
+ */
+export async function logout(): Promise<void> {
+  await fetch(`${FUNCTIONS_BASE}/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  // Don't throw on failure; client will clear local state anyway
+}
+
+/**
  * Check auth callback (called after OAuth redirect)
  * No retry: auth callback is one-time.
  */
@@ -115,7 +126,8 @@ export async function discoverFolders(
   maxDepth: number = 3
 ): Promise<DiscoverFoldersResponse> {
   const response = await fetchWithRetry(
-    `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`
+    `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`,
+    { credentials: "include" }
   );
   return handleResponse<DiscoverFoldersResponse>(response);
 }
@@ -134,6 +146,7 @@ export async function listImages(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,
+    credentials: "include",
   });
   return handleResponse<ListResponse>(response);
 }
@@ -146,6 +159,7 @@ export async function getTempLink(path: string): Promise<TempLinkResponse> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path }),
+    credentials: "include",
   });
   return handleResponse<TempLinkResponse>(response);
 }
@@ -161,6 +175,7 @@ export async function trash(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path, session_id: sessionId }),
+    credentials: "include",
   });
   return handleResponse<TrashResponse>(response);
 }
@@ -179,6 +194,7 @@ export async function undo(
       trashed_path: trashedPath,
       original_path: originalPath,
     }),
+    credentials: "include",
   });
   return handleResponse<UndoResponse>(response);
 }

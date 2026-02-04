@@ -18,6 +18,7 @@ import { useAuthCallback } from "./hooks/useAuth";
 import { useFeedback } from "./contexts/FeedbackContext";
 import {
   listImages,
+  logout,
   trash as apiTrash,
   undo as apiUndo,
   ApiClientError,
@@ -370,6 +371,10 @@ function SetupAddTokens({
 
 export default function App() {
   const { showToast, showCriticalModal } = useFeedback();
+  const [appState, setAppState] = useState<AppState>("loading");
+  const [, setAuthState] = useState<AuthState>({
+    is_authenticated: false,
+  });
 
   /** Route errors: critical (auth) → modal; transient → toast with optional retry */
   const showApiError = useCallback(
@@ -378,7 +383,11 @@ export default function App() {
       const status = err instanceof ApiClientError ? err.status : undefined;
       const category = getErrorCategory(err, { status, message });
       if (category === "critical") {
-        showCriticalModal(message, "Authentication required");
+        showCriticalModal(message, "Authentication required", () => {
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+          setAuthState({ is_authenticated: false });
+          setAppState("login");
+        });
       } else {
         const retryLabel = isRateLimitError(err)
           ? "Retry (rate limited)"
@@ -388,12 +397,8 @@ export default function App() {
         showToast(message, { retry, retryLabel });
       }
     },
-    [showToast, showCriticalModal]
+    [showToast, showCriticalModal, setAppState, setAuthState]
   );
-  const [appState, setAppState] = useState<AppState>("loading");
-  const [, setAuthState] = useState<AuthState>({
-    is_authenticated: false,
-  });
   const [selectedFolder, setSelectedFolder] = useState<FolderInfo | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -494,9 +499,13 @@ export default function App() {
       return;
     }
 
-    // Production: after OAuth we redirect with #setup=1&account_id=...&refresh_token=... so you can add them to Netlify
+    // Legacy setup path: only allow on localhost so we never store tokens from URL in production.
+    // Production OAuth redirects with ?auth=success&account_id=... (no tokens in hash).
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      /^https?:\/\/localhost(:\d+)?(\/|$)/i.test(window.location.origin);
     const hash = window.location.hash.slice(1);
-    if (hash) {
+    if (isLocalhost && hash) {
       const hashParams = new URLSearchParams(hash);
       const setup = hashParams.get("setup");
       const accountIdFromHash = hashParams.get("account_id");
@@ -629,14 +638,16 @@ export default function App() {
   };
 
   /**
-   * Handle logout (clear auth and folder preference)
+   * Handle logout: clear server-side token then local state
    */
   const handleLogout = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(FOLDER_PREFERENCE_KEY);
-    setAuthState({ is_authenticated: false });
-    setSelectedFolder(null);
-    setAppState("login");
+    void logout().finally(() => {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(FOLDER_PREFERENCE_KEY);
+      setAuthState({ is_authenticated: false });
+      setSelectedFolder(null);
+      setAppState("login");
+    });
   };
 
   /**

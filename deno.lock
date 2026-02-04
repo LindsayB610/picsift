@@ -11,25 +11,39 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@emotion/react@^11.14.0",
+        "npm:@emotion/styled@^11.14.1",
         "npm:@eslint/js@^9.15.0",
+        "npm:@mui/icons-material@^7.3.7",
+        "npm:@mui/material@^7.3.7",
+        "npm:@tanstack/react-query@^5.90.20",
+        "npm:@testing-library/jest-dom@^6.6.3",
+        "npm:@testing-library/react@^16.0.1",
+        "npm:@types/canvas-confetti@^1.9.0",
         "npm:@types/node@^22.10.1",
         "npm:@types/react-dom@^18.3.1",
         "npm:@types/react@^18.3.12",
         "npm:@typescript-eslint/eslint-plugin@^8.15.0",
         "npm:@typescript-eslint/parser@^8.15.0",
         "npm:@vitejs/plugin-react@^4.3.3",
+        "npm:axe-core@^4.10.2",
+        "npm:canvas-confetti@^1.9.4",
+        "npm:dotenv@^17.2.3",
         "npm:dropbox@^10.34.0",
         "npm:eslint-config-prettier@^9.1.0",
         "npm:eslint-plugin-react-hooks@5",
         "npm:eslint-plugin-react@^7.37.2",
         "npm:eslint@^9.15.0",
         "npm:globals@^15.12.0",
+        "npm:jsdom@^25.0.1",
         "npm:prettier@^3.3.3",
         "npm:react-dom@^18.3.1",
         "npm:react-markdown@^9.0.1",
         "npm:react@^18.3.1",
         "npm:typescript@~5.6.3",
-        "npm:vite@^5.4.10"
+        "npm:vite@^5.4.10",
+        "npm:vitest-axe@0.1",
+        "npm:vitest@^2.1.6"
       ]
     }
   }

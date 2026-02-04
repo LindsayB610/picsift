@@ -22,6 +22,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
+    "@netlify/blobs": "^10.5.0",
     "@tanstack/react-query": "^5.90.20",
     "canvas-confetti": "^1.9.4",
     "dotenv": "^17.2.3",

@@ -4,6 +4,7 @@
  * filters to image files only.
  */
 
+import { requireSession } from "./_auth_store";
 import { createDropboxClient } from "./_dropbox";
 import { normalizeError } from "./_utils";
 import type { DbxEntry, ListResponse } from "../../src/types";
@@ -11,6 +12,7 @@ import type { DbxEntry, ListResponse } from "../../src/types";
 type HandlerEvent = {
   httpMethod: string;
   path: string;
+  headers?: Record<string, string>;
   body?: string | null;
 };
 
@@ -83,6 +85,9 @@ export const handler = async (
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
+
+  const sessionError = await requireSession(event);
+  if (sessionError) return sessionError as HandlerResponse;
 
   let payload: { path?: string; paths?: string[] };
   try {

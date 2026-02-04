@@ -3,6 +3,7 @@
  * Moves file from trashed_path back to original_path using files/move_v2.
  */
 
+import { requireSession } from "./_auth_store";
 import { createDropboxClient } from "./_dropbox";
 import { normalizeError } from "./_utils";
 import type { UndoResponse } from "../../src/types";
@@ -10,6 +11,7 @@ import type { UndoResponse } from "../../src/types";
 type HandlerEvent = {
   httpMethod: string;
   path: string;
+  headers?: Record<string, string>;
   body?: string | null;
 };
 
@@ -35,6 +37,9 @@ export const handler = async (
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
+
+  const sessionError = await requireSession(event);
+  if (sessionError) return sessionError as HandlerResponse;
 
   let payload: { trashed_path?: string; original_path?: string };
   try {

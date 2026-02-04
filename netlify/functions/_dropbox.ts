@@ -17,6 +17,7 @@ if (process.env.NODE_ENV !== "production" && !process.env.NETLIFY) {
 
 import { Dropbox } from "dropbox";
 import type { DropboxResponse } from "dropbox";
+import { getAuthFromBlob } from "./_auth_store";
 
 // Token cache (in-memory, short-lived)
 interface TokenCache {
@@ -29,12 +30,17 @@ let tokenCache: TokenCache | null = null;
 const TOKEN_CACHE_TTL = 55 * 60 * 1000; // 55 minutes (tokens expire in 1 hour)
 
 /**
- * Get refresh token from environment
+ * Get refresh token: Blob first (production), then env (initial setup / local dev).
+ * Never log the token.
  */
-function getRefreshToken(): string {
+async function getRefreshToken(): Promise<string> {
+  const fromBlob = await getAuthFromBlob();
+  if (fromBlob?.refresh_token) return fromBlob.refresh_token;
   const token = process.env.DROPBOX_REFRESH_TOKEN;
   if (!token) {
-    throw new Error("DROPBOX_REFRESH_TOKEN not configured");
+    throw new Error(
+      "Not authenticated. Log in with Dropbox to continue."
+    );
   }
   return token;
 }
@@ -57,7 +63,7 @@ async function refreshAccessToken(): Promise<{
   access_token: string;
   account_id: string;
 }> {
-  const refreshToken = getRefreshToken();
+  const refreshToken = await getRefreshToken();
   const appKey = process.env.DROPBOX_APP_KEY;
   const appSecret = process.env.DROPBOX_APP_SECRET;
 

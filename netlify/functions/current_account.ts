@@ -31,6 +31,21 @@ export const handler = async (
     };
   }
 
+  // In production, once access control is configured, do not expose account details
+  const authorizedId = process.env.AUTHORIZED_DROPBOX_ACCOUNT_ID;
+  const authorizedEmail = process.env.AUTHORIZED_DROPBOX_EMAIL;
+  const isProduction = Boolean(process.env.NETLIFY);
+  if (isProduction && (authorizedId || authorizedEmail)) {
+    return {
+      statusCode: 404,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Not found",
+        hint: "current_account is only available during initial setup (before AUTHORIZED_* is set).",
+      }),
+    };
+  }
+
   try {
     const { account_id, email } = await getCurrentAccountForSetup();
     return {

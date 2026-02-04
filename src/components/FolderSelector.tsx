@@ -119,7 +119,9 @@ export default function FolderSelector({
   }
 
   if (error && !isCriticalError) {
-    const needsRefreshToken = error.includes("DROPBOX_REFRESH_TOKEN");
+    const needsRefreshToken =
+      error.includes("DROPBOX_REFRESH_TOKEN") ||
+      /refresh|token.*fail|invalid_grant|expired.*token/i.test(error);
     return (
       <div
         className="content-wrap"
@@ -154,6 +156,10 @@ export default function FolderSelector({
             }}
           >
             <strong>How to fix:</strong>
+            <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.875rem" }}>
+              If you just logged out and back in, Dropbox may have issued a new
+              refresh token; copy the new value from the logs and update Netlify.
+            </p>
             <ol style={{ margin: "0.5rem 0 0 1rem", paddingLeft: "0.5rem" }}>
               <li>
                 Go to{" "}

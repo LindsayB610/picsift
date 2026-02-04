@@ -44,18 +44,18 @@ This document verifies each item in the [Security Checklist](PROJECT_PLAN.md#sec
 **Status: PASS**
 
 - `auth_callback.ts` redirects after OAuth to `?auth=success&account_id=...` only (line 305). No `access_token` or `refresh_token` in URL or response body.
-- In production it logs the refresh token to Netlify function logs for manual copy into env vars; it is never sent to the client.
+- In production the refresh token is stored in Netlify Blob only; it is never logged or sent to the client.
 - Frontend `AuthState` (`src/types.ts`) only has `is_authenticated` and `account_id`; no token fields. `localStorage` and `sessionStorage` are not used to store tokens in the current success flow.
 
 **Note:** `App.tsx` has a legacy branch (lines 497–522) that reads `refresh_token` from the URL hash and stores it in `sessionStorage` under `SETUP_TOKENS_KEY`. The current `auth_callback` never redirects with tokens in the hash, so this path is unused. Consider removing or guarding this branch to avoid future risk if the callback were ever changed to send tokens to the client.
 
 ---
 
-## 6. Refresh token stored securely (Netlify env var)
+## 6. Refresh token stored securely (Netlify Blob or env var)
 
 **Status: PASS**
 
-- Refresh token is read from `process.env.DROPBOX_REFRESH_TOKEN` in `_dropbox.ts` and in `auth_callback.ts` only for server-side use (writing to `.env` in local dev or logging in production for manual copy). It is never included in redirects or API responses to the browser.
+- In production the refresh token is stored in Netlify Blob (`_auth_store.ts`); `_dropbox.ts` reads from Blob first, then falls back to `process.env.DROPBOX_REFRESH_TOKEN` for initial setup. `auth_callback` writes to Blob only; the token is never logged. In local dev the token is written to `.env` only. It is never included in redirects or API responses to the browser. Logout clears the Blob entry.
 
 ---
 
@@ -161,4 +161,16 @@ This document verifies each item in the [Security Checklist](PROJECT_PLAN.md#sec
 | 14| HTTPS enforced                           | PASS     |
 | 15| CORS                                     | PASS (N/A)|
 
-**Recommendation:** Before deploy, ensure item 8 is done in Netlify (set `AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL`). Optionally remove or narrow the unused hash/setup branch in `App.tsx` (lines 497–522) that could store a refresh token from the URL to avoid any future misuse.
+**Recommendation:** Before deploy, ensure item 8 is done in Netlify (set `AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL`).
+
+---
+
+## Additional hardening (from full security review)
+
+See [SECURITY_REVIEW.md](SECURITY_REVIEW.md) for the full review. The following hardening has been applied:
+
+- **current_account**: In production, when `AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL` is set, the endpoint returns 404 and does not expose account_id/email (setup-only use).
+- **logout**: Accepts POST only (GET no longer allowed) to prevent logout via link/redirect.
+- **discover_folders**: Error responses no longer include `stack` in the JSON body (server logs only).
+- **App.tsx hash branch**: The legacy path that could store `refresh_token` from the URL hash now runs only on localhost, so production never stores tokens from the URL.
+- **Session binding**: Only devices that completed OAuth can call list/temp_link/trash/undo/discover_folders. A session cookie (`picsift_session`) is set on successful login and required by those functions; without it they return 401. Multiple devices (e.g. phone + desktop) are supported; each login adds that device's session. Logout removes only the current device's session.

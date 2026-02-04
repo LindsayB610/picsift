@@ -3,6 +3,7 @@
  * Recursively scans Dropbox for folders containing images
  */
 
+import { requireSession } from "./_auth_store";
 import { createDropboxClient } from "./_dropbox";
 import { normalizeError } from "./_utils";
 import type { FolderInfo } from "../../src/types";
@@ -10,6 +11,7 @@ import type { FolderInfo } from "../../src/types";
 type HandlerEvent = {
   httpMethod: string;
   path: string;
+  headers?: Record<string, string>;
   queryStringParameters?: Record<string, string>;
 };
 
@@ -211,6 +213,9 @@ export const handler = async (
     };
   }
 
+  const sessionError = await requireSession(event);
+  if (sessionError) return sessionError as HandlerResponse;
+
   try {
     const maxDepth = parseInt(
       event.queryStringParameters?.max_depth || "3",
@@ -389,7 +394,6 @@ export const handler = async (
         message: errorMessage,
         dropboxError,
         httpStatus,
-        ...(errorStack && { stack: errorStack }),
       }),
     };
   }
