@@ -13,17 +13,18 @@ PicSift is a personal photo triage web app that helps you quickly decide which p
 - **Undo-safe**: Deleted photos are moved to quarantine, not permanently deleted
 - **Fast keyboard shortcuts**: `K` to keep, `D` to delete, `U` to undo
 - **Progress tracking**: See how many photos you've reviewed
-- **Dropbox integration**: Works with your Dropbox Camera Uploads folder
+- **Dropbox integration**: Works with your Dropbox folders (e.g. Camera Uploads)
 
 ---
 
 ## How It Works
 
 1. **Authenticate** with your Dropbox account (one-time setup)
-2. **Review photos** from your `/Camera Uploads` folder
-3. **Make decisions**: Keep or delete each photo
-4. **Undo if needed**: Accidentally deleted? Just undo it
-5. **Quarantine safety**: Deleted photos are moved to `/_TRASHME/` for later review
+2. **Select a folder** containing your photos (e.g. Camera Uploads)
+3. **Review photos** one at a time in random order
+4. **Make decisions**: Keep or delete each photo
+5. **Undo if needed**: Accidentally deleted? Just undo it
+6. **Quarantine safety**: Deleted photos are moved to `/_TRASHME/` for later review
 
 ---
 
@@ -38,10 +39,24 @@ PicSift is a personal photo triage web app that helps you quickly decide which p
 
 ## Tech Stack
 
-- **Frontend**: React + Vite + TypeScript
+- **Frontend**: React + Vite + TypeScript (mobile-first, dark theme)
 - **Backend**: Netlify Functions
 - **Storage**: Dropbox API
 - **Hosting**: Netlify (picsift.lindsaybrunner.com)
+- **Tests**: Vitest, Testing Library, axe-core (accessibility)
+
+---
+
+## Development
+
+- **Local dev (frontend only)**: `npm run dev`
+- **Local dev (with Netlify Functions / OAuth)**: `npm run dev:functions` — see [Setup Guide](docs/SETUP_GUIDE.md)
+- **Build**: `npm run build`
+- **Typecheck**: `npm run typecheck`
+- **Lint**: `npm run lint` · **Format**: `npm run format`
+- **Tests**: `npm test` (all) · `npm run test:a11y` (accessibility only) · `npm run test:watch` (watch mode)
+
+See [docs/ACCESSIBILITY_TESTING.md](docs/ACCESSIBILITY_TESTING.md) for how accessibility tests work.
 
 ---
 
@@ -55,7 +70,8 @@ Required environment variables are documented in `.env.example`. Copy it to `.en
 
 1. Click "Login with Dropbox" to authenticate
 2. Grant access to your Dropbox account
-3. Start reviewing your photos!
+3. Select a folder that contains your photos
+4. Start reviewing your photos one at a time
 
 ---
 
@@ -73,6 +89,14 @@ Required environment variables are documented in `.env.example`. Copy it to `.en
 - All Dropbox API calls happen server-side
 - Access tokens never exposed to your browser
 - Open source and transparent
+
+---
+
+## Docs
+
+- [Setup Guide](docs/SETUP_GUIDE.md) — local dev, env, OAuth, deploy
+- [Build notes & plan](docs/BUILD_NOTES.md) — MVP scope and decisions
+- [Accessibility testing](docs/ACCESSIBILITY_TESTING.md) — how a11y tests run
 
 ---
 

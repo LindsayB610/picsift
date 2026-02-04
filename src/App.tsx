@@ -56,21 +56,21 @@ function SetupAddTokens({
 
   return (
     <div
+      className="content-wrap"
       style={{
         maxWidth: '560px',
-        padding: '2rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.5rem',
+        gap: '1.25rem',
       }}
     >
-      <h1 style={{ fontFamily: 'var(--sans)', color: 'var(--text-h)', margin: 0, fontSize: '1.5rem' }}>
+      <h1 style={{ fontFamily: 'var(--sans)', color: 'var(--text-h)', margin: 0, fontSize: '1.35rem' }}>
         One more step
       </h1>
-      <p style={{ color: 'var(--text)', margin: 0, lineHeight: 1.5 }}>
+      <p style={{ color: 'var(--text)', margin: 0, lineHeight: 1.5, fontSize: '0.9375rem' }}>
         Add these two values in Netlify so the app can use your Dropbox:
       </p>
-      <ol style={{ color: 'var(--text)', margin: 0, paddingLeft: '1.25rem', lineHeight: 1.6 }}>
+      <ol style={{ color: 'var(--text)', margin: 0, paddingLeft: '1.25rem', lineHeight: 1.6, fontSize: '0.9375rem' }}>
         <li>Open your Netlify dashboard → your PicSift site.</li>
         <li>Go to <strong>Site configuration</strong> → <strong>Environment variables</strong>.</li>
         <li>Click <strong>Add a variable</strong> (or edit if they exist) and add the two below.</li>
@@ -78,95 +78,99 @@ function SetupAddTokens({
       </ol>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>
             DROPBOX_REFRESH_TOKEN
           </label>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="text"
-              readOnly
-              value={tokens.refreshToken}
-              style={{
-                flex: 1,
-                padding: '0.5rem 0.75rem',
-                fontSize: '0.85rem',
-                fontFamily: 'monospace',
-                border: '1px solid var(--border, #e5e4e7)',
-                borderRadius: '6px',
-                backgroundColor: 'var(--bg-secondary, #f5f5f5)',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => copyToClipboard(tokens.refreshToken)}
-              style={{
-                padding: '0.5rem 1rem',
-                fontSize: '0.9rem',
-                backgroundColor: 'var(--accent, #0061ff)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              Copy
-            </button>
-          </div>
+          <input
+            type="text"
+            readOnly
+            value={tokens.refreshToken}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              fontSize: '16px',
+              fontFamily: 'monospace',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-h)',
+              minHeight: 'var(--touch-min)',
+            }}
+          />
+          <button
+            type="button"
+            className="touch-target-inline"
+            onClick={() => copyToClipboard(tokens.refreshToken)}
+            style={{
+              width: '100%',
+              fontSize: '0.9375rem',
+              fontWeight: 500,
+              backgroundColor: 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            Copy
+          </button>
         </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>
             AUTHORIZED_DROPBOX_ACCOUNT_ID
           </label>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="text"
-              readOnly
-              value={tokens.accountId}
-              style={{
-                flex: 1,
-                padding: '0.5rem 0.75rem',
-                fontSize: '0.85rem',
-                fontFamily: 'monospace',
-                border: '1px solid var(--border, #e5e4e7)',
-                borderRadius: '6px',
-                backgroundColor: 'var(--bg-secondary, #f5f5f5)',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => copyToClipboard(tokens.accountId)}
-              style={{
-                padding: '0.5rem 1rem',
-                fontSize: '0.9rem',
-                backgroundColor: 'var(--accent, #0061ff)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              Copy
-            </button>
-          </div>
+          <input
+            type="text"
+            readOnly
+            value={tokens.accountId}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              fontSize: '16px',
+              fontFamily: 'monospace',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-h)',
+              minHeight: 'var(--touch-min)',
+            }}
+          />
+          <button
+            type="button"
+            className="touch-target-inline"
+            onClick={() => copyToClipboard(tokens.accountId)}
+            style={{
+              width: '100%',
+              fontSize: '0.9375rem',
+              fontWeight: 500,
+              backgroundColor: 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            Copy
+          </button>
         </div>
       </div>
 
-      <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.9rem' }}>
+      <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.875rem' }}>
         After you’ve added both and triggered a new deploy, click below.
       </p>
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="actions-row">
         <button
           type="button"
+          className="touch-target-inline"
           onClick={onContinue}
           style={{
-            padding: '0.75rem 1.5rem',
             fontSize: '1rem',
             fontWeight: 600,
-            backgroundColor: 'var(--accent, #0061ff)',
+            backgroundColor: 'var(--accent)',
             color: 'white',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: '8px',
             cursor: 'pointer',
           }}
         >
@@ -174,14 +178,14 @@ function SetupAddTokens({
         </button>
         <button
           type="button"
+          className="touch-target-inline"
           onClick={onCancel}
           style={{
-            padding: '0.75rem 1.5rem',
             fontSize: '1rem',
             backgroundColor: 'transparent',
             color: 'var(--text)',
-            border: '1px solid var(--border, #e5e4e7)',
-            borderRadius: '6px',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
             cursor: 'pointer',
           }}
         >
@@ -402,30 +406,15 @@ export default function App() {
 
   if (appState === 'loading') {
     return (
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <p>Loading...</p>
+      <main className="page-main">
+        <p style={{ color: 'var(--text)', fontSize: '0.9375rem' }}>Loading…</p>
       </main>
     );
   }
 
   if (appState === 'login') {
     return (
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '2rem',
-        }}
-      >
+      <main className="page-main">
         <Login />
       </main>
     );
@@ -433,15 +422,7 @@ export default function App() {
 
   if (appState === 'setup') {
     return (
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '2rem',
-        }}
-      >
+      <main className="page-main">
         <SetupAddTokens
           onContinue={() => {
             sessionStorage.removeItem(SETUP_TOKENS_KEY);
@@ -455,15 +436,7 @@ export default function App() {
 
   if (appState === 'folder-selection') {
     return (
-      <main
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '2rem',
-        }}
-      >
+      <main className="page-main">
         <FolderSelector
           onFolderSelected={handleFolderSelected}
           onCancel={handleLogout}
@@ -472,75 +445,138 @@ export default function App() {
     );
   }
 
-  // appState === 'ready'
+  // appState === 'ready' — mobile-first homepage (black bg, brand colors)
   // TODO: Show main app (Viewer, Controls, etc.) in Phase 5
   return (
-    <main
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem',
-        gap: '2rem',
-      }}
-    >
-      <div style={{ textAlign: 'center' }}>
-        <h1 style={{ fontFamily: 'var(--sans)', color: 'var(--text-h)', margin: 0 }}>
-          PicSift
-        </h1>
-        <p style={{ color: 'var(--text)', margin: '1rem 0 0 0' }}>
-          Ready to start! Selected folder: {selectedFolder?.name}
-        </p>
-        <p style={{ color: 'var(--text)', fontSize: '0.9rem', margin: '0.5rem 0 0 0' }}>
-          {selectedFolder?.image_count} images to review
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <button
-          onClick={handleChangeFolder}
-          style={{
-            padding: '0.75rem 1.5rem',
-            fontSize: '1rem',
-            backgroundColor: 'transparent',
-            color: 'var(--text)',
-            border: '1px solid var(--border, #e5e4e7)',
-            borderRadius: '6px',
-            cursor: 'pointer',
-          }}
-        >
-          Change Folder
-        </button>
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: '0.75rem 1.5rem',
-            fontSize: '1rem',
-            backgroundColor: 'transparent',
-            color: 'var(--text)',
-            border: '1px solid var(--border, #e5e4e7)',
-            borderRadius: '6px',
-            cursor: 'pointer',
-          }}
-        >
-          Logout
-        </button>
-      </div>
-
+    <main className="page-main">
       <div
+        className="content-wrap"
         style={{
-          padding: '2rem',
-          backgroundColor: 'var(--bg-secondary, #f5f5f5)',
-          borderRadius: '8px',
-          maxWidth: '600px',
-          textAlign: 'center',
+          maxWidth: '420px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem',
         }}
       >
-        <p style={{ color: 'var(--text)', margin: 0 }}>
-          Main app interface coming in Phase 5
-        </p>
+        <header style={{ textAlign: 'center' }}>
+          <h1
+            style={{
+              fontFamily: 'var(--sans)',
+              fontWeight: 600,
+              fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
+              color: 'var(--text-h)',
+              margin: 0,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            PicSift
+          </h1>
+          <p
+            style={{
+              color: 'var(--text)',
+              margin: '0.5rem 0 0 0',
+              fontSize: '0.9375rem',
+            }}
+          >
+            Ready to start
+          </p>
+        </header>
+
+        <section
+          style={{
+            padding: '1.25rem 1rem',
+            backgroundColor: 'var(--bg-elevated)',
+            borderRadius: '12px',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.8125rem' }}>
+            Selected folder
+          </p>
+          <p
+            style={{
+              color: 'var(--text-h)',
+              margin: '0.25rem 0 0 0',
+              fontWeight: 600,
+              fontSize: '1rem',
+            }}
+          >
+            {selectedFolder?.name}
+          </p>
+          <p
+            style={{
+              color: 'var(--text)',
+              margin: '0.5rem 0 0 0',
+              fontSize: '0.8125rem',
+            }}
+          >
+            {selectedFolder?.image_count} images to review
+          </p>
+        </section>
+
+        <div
+          style={{
+            padding: '1rem',
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '10px',
+            border: '1px solid var(--border)',
+            textAlign: 'center',
+          }}
+        >
+          <p style={{ color: 'var(--text)', margin: 0, fontSize: '0.875rem' }}>
+            Main app interface coming in Phase 5
+          </p>
+        </div>
+
+        <div className="actions-row">
+          <button
+            type="button"
+            className="touch-target-inline"
+            onClick={handleChangeFolder}
+            style={{
+              fontSize: '0.9375rem',
+              fontWeight: 500,
+              backgroundColor: 'var(--accent)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'background-color 0.15s ease',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--accent-hover)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--accent)';
+            }}
+          >
+            Change folder
+          </button>
+          <button
+            type="button"
+            className="touch-target-inline"
+            onClick={handleLogout}
+            style={{
+              fontSize: '0.9375rem',
+              backgroundColor: 'transparent',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'color 0.15s ease, border-color 0.15s ease',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = 'var(--text-h)';
+              e.currentTarget.style.borderColor = 'var(--text)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = 'var(--text)';
+              e.currentTarget.style.borderColor = 'var(--border)';
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </main>
   );

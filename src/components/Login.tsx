@@ -83,21 +83,25 @@ export default function Login() {
 
   return (
     <div
+      className="content-wrap"
       style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: '2rem',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: '2rem',
+        gap: '1.5rem',
       }}
     >
       <div
+        className="markdown-content"
         style={{
-          backgroundColor: 'var(--bg-secondary, #f5f5f5)',
-          padding: '2rem',
-          borderRadius: '8px',
+          backgroundColor: 'var(--bg-secondary)',
+          padding: '1.25rem 1rem',
+          borderRadius: '12px',
           lineHeight: '1.6',
+          border: '1px solid var(--border)',
+          maxHeight: '60vh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         <ReactMarkdown>{README_CONTENT}</ReactMarkdown>
@@ -105,16 +109,19 @@ export default function Login() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <button
+          type="button"
+          className="touch-target-inline"
           onClick={handleLogin}
           disabled={startAuthMutation.isPending}
           style={{
-            padding: '1rem 2rem',
-            fontSize: '1.1rem',
+            width: '100%',
+            padding: '0.875rem 1.5rem',
+            fontSize: '1rem',
             fontWeight: '600',
-            backgroundColor: 'var(--accent, #0061ff)',
+            backgroundColor: 'var(--accent)',
             color: 'white',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: '8px',
             cursor: startAuthMutation.isPending ? 'not-allowed' : 'pointer',
             opacity: startAuthMutation.isPending ? 0.6 : 1,
             transition: 'opacity 0.2s',
@@ -127,10 +134,10 @@ export default function Login() {
           <div
             style={{
               padding: '1rem',
-              backgroundColor: 'var(--error-bg, #fee)',
-              color: 'var(--error-text, #c33)',
-              borderRadius: '6px',
-              border: '1px solid var(--error-border, #fcc)',
+              backgroundColor: 'var(--error-bg)',
+              color: 'var(--error-text)',
+              borderRadius: '8px',
+              border: '1px solid var(--error-border)',
             }}
           >
             {startAuthMutation.error instanceof Error
