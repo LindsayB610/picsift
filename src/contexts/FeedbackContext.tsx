@@ -14,12 +14,17 @@ import {
 } from "react";
 
 const TOAST_DURATION_MS = 5000;
+const TOAST_SUCCESS_DURATION_MS = 3000;
+
+export type ToastVariant = "error" | "success";
 
 export interface ToastOptions {
   /** Optional retry action; button is shown when provided */
   retry?: () => void;
   /** Optional custom retry button label (e.g. "Retry (rate limited)") */
   retryLabel?: string;
+  /** Toast style: error (default) or success */
+  variant?: ToastVariant;
 }
 
 export interface ToastItem {
@@ -28,6 +33,7 @@ export interface ToastItem {
   retry?: () => void;
   retryLabel?: string;
   expiresAt: number;
+  variant: ToastVariant;
 }
 
 interface CriticalModalState {
@@ -67,18 +73,22 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback((message: string, options?: ToastOptions) => {
     const id = crypto.randomUUID();
+    const variant = options?.variant ?? "error";
+    const duration =
+      variant === "success" ? TOAST_SUCCESS_DURATION_MS : TOAST_DURATION_MS;
     const item: ToastItem = {
       id,
       message,
       retry: options?.retry,
       retryLabel: options?.retryLabel,
-      expiresAt: Date.now() + TOAST_DURATION_MS,
+      expiresAt: Date.now() + duration,
+      variant,
     };
     setToasts((prev) => [...prev, item]);
-    if (TOAST_DURATION_MS > 0) {
+    if (duration > 0) {
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, TOAST_DURATION_MS);
+      }, duration);
     }
   }, []);
 
@@ -179,6 +189,37 @@ function ToastList({
   );
 }
 
+function toastStyles(variant: ToastVariant) {
+  if (variant === "success") {
+    return {
+      padding: "0.75rem 1rem",
+      backgroundColor: "var(--bg-elevated)",
+      border: "1px solid var(--accent)",
+      borderRadius: "8px",
+      color: "var(--accent)",
+      fontSize: "0.9375rem",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.75rem",
+      flexWrap: "wrap",
+    } as const;
+  }
+  return {
+    padding: "0.75rem 1rem",
+    backgroundColor: "var(--bg-elevated)",
+    border: "1px solid var(--error-border)",
+    borderRadius: "8px",
+    color: "var(--error-text)",
+    fontSize: "0.9375rem",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    flexWrap: "wrap",
+  } as const;
+}
+
 function ToastItemView({
   toast,
   onDismiss,
@@ -190,19 +231,7 @@ function ToastItemView({
     <div
       className="feedback-toast"
       role="alert"
-      style={{
-        padding: "0.75rem 1rem",
-        backgroundColor: "var(--bg-elevated)",
-        border: "1px solid var(--error-border)",
-        borderRadius: "8px",
-        color: "var(--error-text)",
-        fontSize: "0.9375rem",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.75rem",
-        flexWrap: "wrap",
-      }}
+      style={toastStyles(toast.variant)}
     >
       <span style={{ flex: "1 1 auto", minWidth: 0 }}>{toast.message}</span>
       {toast.retry && (

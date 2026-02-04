@@ -29,6 +29,7 @@ import {
   isRateLimitError,
   isNetworkError,
 } from "./utils/error";
+import { prefersReducedMotion } from "./utils/motion";
 import type {
   AuthState,
   FolderInfo,
@@ -57,11 +58,14 @@ function shuffleArray<T>(array: T[]): T[] {
   return out;
 }
 
+const CONFETTI_COLORS = ["#667eea", "#764ba2", "#f093fb", "#4facfe", "#00f2fe"];
+
 function maybeConfetti(
   trashedCount: number,
   frequency: ConfettiFrequency
 ): void {
   if (frequency === "off") return;
+  if (prefersReducedMotion()) return;
   const n = frequency === "1" ? 1 : parseInt(frequency, 10);
   if (Number.isNaN(n) || n <= 0) return;
   if (trashedCount % n !== 0) return;
@@ -69,6 +73,7 @@ function maybeConfetti(
     particleCount: 80,
     spread: 70,
     origin: { y: 0.6 },
+    colors: CONFETTI_COLORS,
   });
 }
 
@@ -801,6 +806,7 @@ export default function App() {
         sessionIndex,
         newUndoStack
       );
+      showToast("Photo restored.", { variant: "success" });
     } catch (err: unknown) {
       const message = normalizeError(err);
       setActionError(message);
@@ -816,6 +822,7 @@ export default function App() {
     sessionQueue,
     sessionIndex,
     showApiError,
+    showToast,
   ]);
 
   // Clear action error after a delay so user can read it
@@ -852,6 +859,22 @@ export default function App() {
       clearPersistedSession();
     }
   }, [isSessionComplete]);
+
+  // One-time confetti when user lands on session complete (if they have confetti enabled)
+  useEffect(() => {
+    if (!isSessionComplete || totalCount === 0) return;
+    if (getConfettiFrequency() === "off") return;
+    if (prefersReducedMotion()) return;
+    const t = setTimeout(() => {
+      void confetti({
+        particleCount: 120,
+        spread: 100,
+        origin: { y: 0.5 },
+        colors: CONFETTI_COLORS,
+      });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [isSessionComplete, totalCount]);
 
   // Phase 6: clear expired or wrong-folder session when on start prompt (handle expired sessions gracefully)
   useEffect(() => {
@@ -963,11 +986,11 @@ export default function App() {
         >
           <header style={{ textAlign: "center" }}>
             <h1
+              className="text-gradient"
               style={{
                 fontFamily: "var(--sans)",
                 fontWeight: 600,
                 fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
-                color: "var(--text-h)",
                 margin: 0,
                 letterSpacing: "-0.02em",
               }}
@@ -1149,23 +1172,31 @@ export default function App() {
           }}
         >
           <h1
+            className="text-gradient"
             style={{
               fontFamily: "var(--sans)",
               fontWeight: 600,
               fontSize: "1.5rem",
-              color: "var(--text-h)",
               margin: 0,
               textAlign: "center",
             }}
           >
             Session complete
           </h1>
+          <p
+            style={{
+              margin: 0,
+              color: "var(--text)",
+              fontSize: "0.9375rem",
+              textAlign: "center",
+            }}
+          >
+            Nice work—you're all caught up. Ready for another round?
+          </p>
           <section
+            className="card-gradient-accent"
             style={{
               padding: "1.25rem",
-              backgroundColor: "var(--bg-elevated)",
-              borderRadius: "12px",
-              border: "1px solid var(--border)",
             }}
           >
             <p
@@ -1266,11 +1297,11 @@ export default function App() {
           }}
         >
           <h1
+            className="text-gradient"
             style={{
               fontFamily: "var(--sans)",
               fontWeight: 600,
               fontSize: "1.25rem",
-              color: "var(--text-h)",
               margin: 0,
             }}
           >

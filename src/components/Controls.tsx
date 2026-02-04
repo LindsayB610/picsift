@@ -2,6 +2,7 @@
  * Triage controls: Keep, Delete, Undo with keyboard shortcut labels and progress
  */
 
+import { useState, useCallback } from "react";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UndoIcon from "@mui/icons-material/Undo";
@@ -35,6 +36,8 @@ const buttonBase = {
   transition: "background-color 0.15s ease, opacity 0.15s ease",
 } as const;
 
+const KEEP_ANIMATION_MS = 400;
+
 export default function Controls({
   onKeep,
   onDelete,
@@ -44,6 +47,15 @@ export default function Controls({
   canUndo,
   isBusy = false,
 }: ControlsProps) {
+  const [keepJustClicked, setKeepJustClicked] = useState(false);
+
+  const handleKeep = useCallback(() => {
+    if (isBusy) return;
+    setKeepJustClicked(true);
+    onKeep();
+    setTimeout(() => setKeepJustClicked(false), KEEP_ANIMATION_MS);
+  }, [isBusy, onKeep]);
+
   return (
     <div
       className="triage-controls"
@@ -67,6 +79,21 @@ export default function Controls({
       >
         {currentPosition} of {totalCount}
       </p>
+      <div
+        className="progress-bar-wrap"
+        role="progressbar"
+        aria-valuenow={currentPosition}
+        aria-valuemin={1}
+        aria-valuemax={totalCount}
+        aria-label="Session progress"
+      >
+        <div
+          className="progress-bar-fill"
+          style={{
+            width: `${totalCount > 0 ? (currentPosition / totalCount) * 100 : 0}%`,
+          }}
+        />
+      </div>
 
       <div
         className="controls-buttons"
@@ -80,8 +107,8 @@ export default function Controls({
       >
         <button
           type="button"
-          className="touch-target-inline"
-          onClick={onKeep}
+          className={`touch-target-inline${keepJustClicked ? " keep-just-clicked" : ""}`}
+          onClick={handleKeep}
           disabled={isBusy}
           style={{
             ...buttonBase,
