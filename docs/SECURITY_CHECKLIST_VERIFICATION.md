@@ -35,7 +35,7 @@ This document verifies each item in the [Security Checklist](PROJECT_PLAN.md#sec
 **Status: PASS**
 
 - Frontend (`src/`) only calls `fetch()` to `/.netlify/functions/*`. No Dropbox SDK or `api.dropbox.com` usage in `src/`.
-- All Dropbox API usage is in `netlify/functions/` (`_dropbox.ts`, `list.ts`, `temp_link.ts`, `trash.ts`, `undo.ts`, `discover_folders.ts`, `auth_callback.ts`).
+- All Dropbox API usage is in `netlify/functions/` (`_dropbox.ts`, `list.ts`, `temp_link.ts`, `temp_links.ts`, `trash.ts`, `undo.ts`, `discover_folders.ts`, `auth_callback.ts`).
 
 ---
 
@@ -109,6 +109,7 @@ This document verifies each item in the [Security Checklist](PROJECT_PLAN.md#sec
 
 - **list.ts:** `validatePath()` rejects empty/non-string, `".."`, and paths that are not `""` or starting with `"/"` (lines 39–44). Used before listing.
 - **temp_link.ts:** Same style `validatePath()` (no `".."`, must start with `"/"`) (lines 22–26).
+- **temp_links.ts:** Same style `validatePath()` on each path in `paths` array; max 10 paths (lines 25–76).
 - **trash.ts:** `validatePath()` (no `".."`, must start with `"/"`) and `validateSessionId()` (length ≤ 128, alphanumeric + hyphen + underscore only) (lines 26–36).
 - **undo.ts:** `validatePath()` on both `trashed_path` and `original_path`; additionally requires `trashed_path.startsWith("/_TRASHME/")` (lines 22–26, 58–80).
 
@@ -173,4 +174,4 @@ See [SECURITY_REVIEW.md](SECURITY_REVIEW.md) for the full review. The following 
 - **logout**: Accepts POST only (GET no longer allowed) to prevent logout via link/redirect.
 - **discover_folders**: Error responses no longer include `stack` in the JSON body (server logs only).
 - **App.tsx hash branch**: The legacy path that could store `refresh_token` from the URL hash now runs only on localhost, so production never stores tokens from the URL.
-- **Session binding**: Only devices that completed OAuth can call list/temp_link/trash/undo/discover_folders. A session cookie (`picsift_session`) is set on successful login and required by those functions; without it they return 401. Multiple devices (e.g. phone + desktop) are supported; each login adds that device's session. Logout removes only the current device's session.
+- **Session binding**: Only devices that completed OAuth can call list/temp_link/temp_links/trash/undo/discover_folders. A session cookie (`picsift_session`) is set on successful login and required by those functions; without it they return 401. Multiple devices (e.g. phone + desktop) are supported; each login adds that device's session. Logout removes only the current device's session.

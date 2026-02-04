@@ -111,6 +111,17 @@ export interface TempLinkResponse {
   expires_at: string;
 }
 
+/** One item from batch temp links response */
+export interface TempLinkItem {
+  path: string;
+  url: string;
+  expires_at: string;
+}
+
+export interface TempLinksBatchResponse {
+  links: TempLinkItem[];
+}
+
 export interface TrashResponse {
   success: boolean;
   trash_record?: TrashRecord;

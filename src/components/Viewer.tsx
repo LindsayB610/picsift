@@ -13,14 +13,18 @@ export interface ViewerProps {
   currentEntry: DbxEntry | null;
   /** Next entry (for preloading only) */
   nextEntry?: DbxEntry | null;
+  /** One more ahead (faster advance) */
+  nextEntry2?: DbxEntry | null;
 }
 
 export default function Viewer({
   currentEntry,
   nextEntry = null,
+  nextEntry2 = null,
 }: ViewerProps) {
   const currentPath = currentEntry?.path_display ?? null;
   const nextPath = nextEntry?.path_display ?? null;
+  const nextPath2 = nextEntry2?.path_display ?? null;
   const [imageLoadError, setImageLoadError] = useState(false);
 
   const {
@@ -31,6 +35,7 @@ export default function Viewer({
   } = useTempLink(currentPath);
 
   const { data: nextUrl } = useTempLink(nextPath);
+  const { data: nextUrl2 } = useTempLink(nextPath2);
 
   // Reset image load error when entry changes
   useEffect(() => {
@@ -43,6 +48,13 @@ export default function Viewer({
     const img = new Image();
     img.src = nextUrl;
   }, [nextUrl]);
+
+  // Preload image after next (smoother rapid advances)
+  useEffect(() => {
+    if (!nextUrl2) return;
+    const img = new Image();
+    img.src = nextUrl2;
+  }, [nextUrl2]);
 
   if (!currentEntry) {
     return (

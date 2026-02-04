@@ -301,6 +301,7 @@ export default function FolderSelector({
             className="touch-target-inline"
             style={{
               width: "100%",
+              minWidth: 0,
               padding: "0.875rem 0.75rem",
               textAlign: "left",
               backgroundColor:
@@ -314,6 +315,7 @@ export default function FolderSelector({
               borderRadius: "8px",
               cursor: "pointer",
               transition: "background-color 0.15s, border-color 0.15s",
+              overflow: "hidden",
             }}
           >
             <div
@@ -322,6 +324,7 @@ export default function FolderSelector({
                 alignItems: "center",
                 gap: "0.5rem",
                 minHeight: 0,
+                minWidth: 0,
               }}
             >
               <div
@@ -346,7 +349,10 @@ export default function FolderSelector({
                     style={{
                       fontWeight: "600",
                       color: "var(--text-h)",
-                      marginBottom: "0.125rem",
+                      marginBottom:
+                        folder.display_path !== folder.name
+                          ? "0.125rem"
+                          : 0,
                       fontSize: "0.9375rem",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -355,17 +361,19 @@ export default function FolderSelector({
                   >
                     {folder.name}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.8125rem",
-                      color: "var(--text)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {folder.display_path}
-                  </div>
+                  {folder.display_path !== folder.name && (
+                    <div
+                      style={{
+                        fontSize: "0.8125rem",
+                        color: "var(--text)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {folder.display_path}
+                    </div>
+                  )}
                 </div>
               </div>
               <div

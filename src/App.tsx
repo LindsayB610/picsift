@@ -3,7 +3,7 @@
  * Handles authentication flow and routing
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import confetti from "canvas-confetti";
 import SettingsIcon from "@mui/icons-material/Settings";
 import Login from "./components/Login";
@@ -18,11 +18,13 @@ import { useAuthCallback } from "./hooks/useAuth";
 import { useFeedback } from "./contexts/FeedbackContext";
 import {
   listImages,
+  getTempLinks,
   logout,
   trash as apiTrash,
   undo as apiUndo,
   ApiClientError,
 } from "./api";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   normalizeError,
   getErrorCategory,
@@ -503,6 +505,52 @@ export default function App() {
   const [sessionListError, setSessionListError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** For background delete: only apply completion when session still matches */
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionQueueRef = useRef<DbxEntry[]>([]);
+  const sessionIndexRef = useRef(0);
+  const undoStackRef = useRef<UndoStackItem[]>([]);
+  /** Last failed delete (path/sessionId/entry) for retry from toast */
+  const [lastFailedDelete, setLastFailedDelete] = useState<{
+    path: string;
+    sessionId: string;
+    entry: DbxEntry;
+  } | null>(null);
+
+  const queryClient = useQueryClient();
+  const prefetchedTempLinksSessionRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+  useEffect(() => {
+    sessionQueueRef.current = sessionQueue;
+    sessionIndexRef.current = sessionIndex;
+    undoStackRef.current = undoStack;
+  }, [sessionQueue, sessionIndex, undoStack]);
+
+  // Prefetch temp links for first few images so first loads are instant
+  useEffect(() => {
+    if (
+      !sessionId ||
+      sessionQueue.length === 0 ||
+      prefetchedTempLinksSessionRef.current === sessionId
+    )
+      return;
+    prefetchedTempLinksSessionRef.current = sessionId;
+    const paths = sessionQueue
+      .slice(0, 5)
+      .map((e) => e.path_display)
+      .filter(Boolean);
+    if (paths.length === 0) return;
+    getTempLinks(paths)
+      .then((res) => {
+        res.links.forEach(({ path, url }) =>
+          queryClient.setQueryData(["tempLink", path], url)
+        );
+      })
+      .catch(() => {});
+  }, [sessionId, sessionQueue, queryClient]);
 
   // Check for OAuth callback in URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -852,6 +900,7 @@ export default function App() {
 
   const currentEntry = sessionQueue[sessionIndex] ?? null;
   const nextEntry = sessionQueue[sessionIndex + 1] ?? null;
+  const nextEntry2 = sessionQueue[sessionIndex + 2] ?? null;
   const trashedCount = undoStack.length;
   const keptCount = sessionIndex - trashedCount;
   const totalCount = sessionQueue.length;
@@ -883,40 +932,97 @@ export default function App() {
     undoStack,
   ]);
 
-  const onDelete = useCallback(async () => {
-    if (actionBusy || !currentEntry || !sessionId || !selectedFolder) return;
+  /** Retry the last failed delete (used by toast from showApiError) */
+  const retryLastDelete = useCallback(() => {
+    const failed = lastFailedDelete;
+    if (!failed) return;
+    setLastFailedDelete(null);
     setActionError(null);
-    setActionBusy(true);
-    try {
-      const result = await apiTrash(currentEntry.path_display, sessionId);
-      if (!result.success || !result.trash_record) {
-        throw new Error(result.error ?? "Delete failed");
-      }
-      const record = result.trash_record;
-      addReviewedPath(
-        selectedFolder.path,
-        currentEntry.path_lower ?? currentEntry.path_display
-      );
-      const newUndoItem: UndoStackItem = { record, entry: currentEntry };
-      setUndoStack((prev) => [...prev, newUndoItem]);
-      setSessionIndex((i) => i + 1);
-      maybeConfetti(undoStack.length + 1, getConfettiFrequency());
-      saveSessionToStorage(
-        sessionId,
-        selectedFolder,
-        sessionQueue,
-        sessionIndex + 1,
-        [...undoStack, newUndoItem]
-      );
-    } catch (err: unknown) {
-      const message = normalizeError(err);
-      setActionError(message);
-      showApiError(err, () => void onDelete());
-    } finally {
-      setActionBusy(false);
-    }
+    void apiTrash(failed.path, failed.sessionId)
+      .then((result) => {
+        if (!result.success || !result.trash_record) {
+          throw new Error(result.error ?? "Delete failed");
+        }
+        if (sessionIdRef.current !== failed.sessionId) return;
+        const newUndoItem: UndoStackItem = {
+          record: result.trash_record,
+          entry: failed.entry,
+        };
+        setUndoStack((prev) => {
+          const next = [...prev, newUndoItem];
+          const folder = selectedFolder;
+          if (folder) {
+            saveSessionToStorage(
+              failed.sessionId,
+              folder,
+              sessionQueueRef.current,
+              sessionIndexRef.current,
+              next
+            );
+          }
+          return next;
+        });
+        maybeConfetti(
+          undoStackRef.current.length + 1,
+          getConfettiFrequency()
+        );
+        showToast("Delete completed.", { variant: "success" });
+      })
+      .catch((err: unknown) => {
+        setLastFailedDelete(failed);
+        showApiError(err, () => retryLastDelete());
+      });
+  }, [lastFailedDelete, selectedFolder, showApiError, showToast]);
+
+  const onDelete = useCallback(() => {
+    if (!currentEntry || !sessionId || !selectedFolder) return;
+    setActionError(null);
+    setLastFailedDelete(null);
+
+    const entry = currentEntry;
+    const pathKey = entry.path_lower ?? entry.path_display;
+
+    // Optimistic: advance to next image immediately
+    addReviewedPath(selectedFolder.path, pathKey);
+    const nextIndex = sessionIndex + 1;
+    setSessionIndex(nextIndex);
+    saveSessionToStorage(
+      sessionId,
+      selectedFolder,
+      sessionQueue,
+      nextIndex,
+      undoStack
+    );
+
+    // Move to trash in background; add to undo stack when done
+    void apiTrash(entry.path_display, sessionId)
+      .then((result) => {
+        if (!result.success || !result.trash_record) {
+          throw new Error(result.error ?? "Delete failed");
+        }
+        if (sessionIdRef.current !== sessionId) return;
+        const record = result.trash_record;
+        const newUndoItem: UndoStackItem = { record, entry };
+        setUndoStack((prev) => [...prev, newUndoItem]);
+        maybeConfetti(undoStack.length + 1, getConfettiFrequency());
+        saveSessionToStorage(
+          sessionId,
+          selectedFolder,
+          sessionQueue,
+          nextIndex,
+          [...undoStack, newUndoItem]
+        );
+      })
+      .catch((err: unknown) => {
+        removeReviewedPath(selectedFolder.path, pathKey);
+        setLastFailedDelete({
+          path: entry.path_display,
+          sessionId,
+          entry,
+        });
+        showApiError(err, () => retryLastDelete());
+      });
   }, [
-    actionBusy,
     currentEntry,
     sessionId,
     selectedFolder,
@@ -924,6 +1030,7 @@ export default function App() {
     sessionIndex,
     undoStack,
     showApiError,
+    retryLastDelete,
   ]);
 
   const onUndo = useCallback(async () => {
@@ -1496,7 +1603,11 @@ export default function App() {
             </button>
           </header>
 
-          <Viewer currentEntry={currentEntry} nextEntry={nextEntry} />
+          <Viewer
+              currentEntry={currentEntry}
+              nextEntry={nextEntry}
+              nextEntry2={nextEntry2}
+            />
 
           {actionError && (
             <p

@@ -35,7 +35,7 @@ src/
     setup.ts           # Vitest: vitest-axe, jest-dom, document.lang
     utils.tsx          # custom render with QueryClientProvider
     a11y/               # Accessibility tests (axe + role/name checks)
-netlify/functions/     # Serverless: auth_start, auth_callback, discover_folders, health
+netlify/functions/     # Serverless: auth_start, auth_callback, discover_folders, health, list, temp_link, temp_links, trash, undo
 docs/                  # BUILD_NOTES, SETUP_GUIDE, DECISIONS, ACCESSIBILITY_TESTING, etc.
 ```
 

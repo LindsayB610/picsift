@@ -364,6 +364,35 @@ a:focus-visible,
   pointer-events: none;
 }
 
+/* Login homepage: steps grid and keys */
+.login-home {
+  max-width: min(var(--content-max), 480px);
+}
+.login-steps {
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 420px) {
+  .login-steps {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.login-step-badge {
+  line-height: 1;
+}
+.login-key kbd {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--border);
+  font-size: 0.75em;
+}
+.login-more h2 {
+  margin-top: 1em;
+  margin-bottom: 0.35em;
+}
+.login-more h2:first-child {
+  margin-top: 0;
+}
+
 /* Action row: stack on mobile, row on larger */
 .actions-row {
   display: flex;

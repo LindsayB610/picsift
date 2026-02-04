@@ -81,7 +81,7 @@ Today there is a single blob (one refresh token, one account, many sessions). We
   - **One blob per account:** e.g. key `auth:${account_id}` with `{ refresh_token, session_entries }`. Session cookie must identify which account (e.g. cookie value is still a session secret, but we need a way to resolve session → account_id).
   - **Single structured blob:** e.g. one blob with `{ accounts: { [account_id]: { refresh_token, session_entries } }, sessionToAccount: { [session_secret]: account_id } }`. Lookup: cookie → session_secret → account_id → token/sessions.
 
-Either way, the rest of the app (list, temp_link, trash, undo, discover_folders) must:
+Either way, the rest of the app (list, temp_link, temp_links, trash, undo, discover_folders) must:
 
 - Read the session cookie.
 - Resolve it to an `account_id` (and optionally verify that account is still approved).

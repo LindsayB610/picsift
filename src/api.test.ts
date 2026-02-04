@@ -10,6 +10,7 @@ import {
   discoverFolders,
   listImages,
   getTempLink,
+  getTempLinks,
   trash,
   undo,
 } from "./api";
@@ -292,6 +293,49 @@ describe("API client with mocked fetch", () => {
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ path: "/img.jpg" }),
+        })
+      );
+    });
+  });
+
+  describe("getTempLinks", () => {
+    it("returns empty links without calling fetch when paths is empty", async () => {
+      const mockFetch = vi.mocked(fetch);
+      const result = await getTempLinks([]);
+      expect(result).toEqual({ links: [] });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("sends paths and returns links", async () => {
+      const mockFetch = vi.mocked(fetch);
+      mockFetch.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            links: [
+              { path: "/a.jpg", url: "https://temp.link/a", expires_at: "2025-01-01T00:00:00Z" },
+              { path: "/b.jpg", url: "https://temp.link/b", expires_at: "2025-01-01T00:00:00Z" },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        )
+      );
+      const result = await getTempLinks(["/a.jpg", "/b.jpg"]);
+      expect(result.links).toHaveLength(2);
+      expect(result.links[0]).toEqual({
+        path: "/a.jpg",
+        url: "https://temp.link/a",
+        expires_at: "2025-01-01T00:00:00Z",
+      });
+      expect(result.links[1]).toEqual({
+        path: "/b.jpg",
+        url: "https://temp.link/b",
+        expires_at: "2025-01-01T00:00:00Z",
+      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("temp_links"),
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ paths: ["/a.jpg", "/b.jpg"] }),
         })
       );
     });

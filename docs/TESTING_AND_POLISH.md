@@ -15,7 +15,7 @@ Checklist for testing the full flow and polishing the experience. See [PROJECT_P
 ## Security Testing
 
 - [ ] **Unauthorized user:** Log in with a different Dropbox account than `AUTHORIZED_DROPBOX_ACCOUNT_ID`. Expect "Access denied. This app is restricted to authorized users only." and no tokens stored.
-- [ ] **Token validation:** All API calls (list, temp_link, trash, undo) use server-side tokens; tokens are validated against the authorized account before each request (see `_dropbox.ts`).
+- [ ] **Token validation:** All API calls (list, temp_link, temp_links, trash, undo) use server-side tokens; tokens are validated against the authorized account before each request (see `_dropbox.ts`).
 - [ ] **Token refresh:** After refresh, new token is validated; invalid/expired tokens are cleared and not reused.
 - [ ] **Error handling:** Invalid or mismatched tokens result in clear errors (no sensitive data leaked).
 

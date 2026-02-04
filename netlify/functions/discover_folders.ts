@@ -29,8 +29,6 @@ export function __clearFolderCacheForTesting(): void {
   folderCache = null;
 }
 
-/** Max concurrent Dropbox API calls (avoids rate limits, speeds up discovery) */
-const DISCOVER_CONCURRENCY = 6;
 let folderCache: {
   maxDepth: number;
   result: { folders: FolderInfo[]; total_folders: number };
@@ -60,68 +58,32 @@ function isImageFile(name: string): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
-/**
- * Count images in a folder (non-recursive)
- */
-async function countImagesInFolder(
-  path: string,
-  dbx: Awaited<ReturnType<typeof createDropboxClient>>
-): Promise<number> {
-  let count = 0;
-  let hasMore = true;
-  let cursor: string | undefined;
+/** Depth of a folder path: number of segments (e.g. /a/b => 2) */
+function folderDepth(path: string): number {
+  const segments = path.split("/").filter(Boolean);
+  return segments.length;
+}
 
-  while (hasMore) {
-    const result = cursor
-      ? await dbx.filesListFolderContinue({ cursor })
-      : await dbx.filesListFolder({ path, recursive: false });
-
-    const entries = result.result.entries;
-    for (const entry of entries) {
-      if (entry[".tag"] === "file" && isImageFile(entry.name)) {
-        count++;
-      }
-    }
-
-    hasMore = result.result.has_more;
-    cursor = result.result.cursor;
-  }
-
-  return count;
+/** Parent folder path; "" for root-level folders */
+function dirname(path: string): string {
+  const i = path.lastIndexOf("/");
+  if (i <= 0) return "";
+  return path.slice(0, i);
 }
 
 /**
- * Process items in parallel with concurrency limit
+ * Discover folders with images using a single recursive list_folder.
+ * Much faster than one API call per folder (one or few calls for the whole tree).
  */
-async function processBatches<T, R>(
-  items: T[],
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += DISCOVER_CONCURRENCY) {
-    const batch = items.slice(i, i + DISCOVER_CONCURRENCY);
-    const batchResults = await Promise.all(batch.map(fn));
-    results.push(...batchResults);
-  }
-  return results;
-}
-
-/**
- * Recursively discover folders with images
- */
-async function discoverFoldersRecursive(
-  path: string,
+async function discoverFoldersRecursiveList(
+  rootPath: string,
   dbx: Awaited<ReturnType<typeof createDropboxClient>>,
-  maxDepth: number,
-  currentDepth: number = 0
+  maxDepth: number
 ): Promise<FolderInfo[]> {
-  if (currentDepth >= maxDepth) {
-    return [];
-  }
-
-  const folders: FolderInfo[] = [];
+  const pathCount = new Map<string, number>();
   let hasMore = true;
   let cursor: string | undefined;
+  let totalEntries = 0;
 
   try {
     while (hasMore) {
@@ -130,97 +92,73 @@ async function discoverFoldersRecursive(
         result = cursor
           ? await dbx.filesListFolderContinue({ cursor })
           : await dbx.filesListFolder({
-              path: path || "", // Ensure empty string for root
-              recursive: false,
+              path: rootPath || "",
+              recursive: true,
             });
       } catch (listErr: unknown) {
         const errorMsg = normalizeError(listErr);
-        console.error(`[DISCOVER] Error listing folder "${path}": ${errorMsg}`);
-
-        // Extract DropboxResponseError details
+        console.error(
+          `[DISCOVER] Error listing folder "${rootPath}": ${errorMsg}`
+        );
         if (listErr != null && typeof listErr === "object") {
           const err = listErr as Record<string, unknown>;
-          if ("error" in err) {
-            console.error("[DISCOVER] Dropbox error:", err.error);
-          }
-          if ("status" in err) {
-            console.error("[DISCOVER] HTTP status:", err.status);
-          }
-          if ("headers" in err) {
-            console.error("[DISCOVER] Response headers:", err.headers);
-          }
+          if ("error" in err) console.error("[DISCOVER] Dropbox error:", err.error);
+          if ("status" in err) console.error("[DISCOVER] HTTP status:", err.status);
         }
         throw listErr;
       }
 
       const entries = result.result.entries;
+      totalEntries += entries.length;
 
-      if (currentDepth === 0 && !cursor) {
-        console.log(`[DISCOVER] Root level: found ${entries.length} entries`);
+      if (!cursor) {
+        console.log(
+          `[DISCOVER] Recursive list: processing batch of ${entries.length} entries`
+        );
       }
 
-      const folderEntries = entries.filter(
-        (e): e is typeof e & { path_lower: string; path_display?: string; name: string } =>
-          e[".tag"] === "folder" && !!e.path_lower && !!e.name
-      );
-
-      for (const e of entries) {
-        if (e[".tag"] === "folder" && (!e.path_lower || !e.name)) {
-          console.warn(`Skipping folder with missing required fields:`, e);
-        }
-      }
-
-      // Process sibling folders in parallel (count + recurse)
-      const subResults = await processBatches(folderEntries, async (entry) => {
-        const { path_lower: pathLower, path_display: pathDisplay, name } = entry;
-        const imageCount = await countImagesInFolder(pathLower, dbx);
-
-        if (currentDepth <= 1) {
-          console.log(
-            `[DISCOVER] Folder "${name}" (${pathLower}): ${imageCount} images`
+      for (const entry of entries) {
+        if (entry[".tag"] !== "file" || !isImageFile(entry.name)) continue;
+        const pathLower =
+          (entry as { path_lower?: string }).path_lower ??
+          (entry as { path_display?: string }).path_display;
+        if (!pathLower || typeof pathLower !== "string") continue;
+        const folderPath = dirname(pathLower) || "/";
+        const depth =
+          folderPath === "/" || folderPath === "" ? 1 : folderDepth(folderPath);
+        if (depth <= maxDepth) {
+          pathCount.set(
+            folderPath,
+            (pathCount.get(folderPath) ?? 0) + 1
           );
         }
-
-        const displayPath = pathDisplay
-          ? pathDisplay.split("/").filter(Boolean).join(" / ")
-          : "/";
-
-        let found: FolderInfo[] = [];
-        if (imageCount > 0) {
-          found.push({
-            path: pathLower,
-            name,
-            image_count: imageCount,
-            display_path: displayPath,
-          });
-          const subfolders = await discoverFoldersRecursive(
-            pathLower,
-            dbx,
-            maxDepth,
-            currentDepth + 1
-          );
-          found.push(...subfolders);
-        }
-        return found;
-      });
-
-      for (const arr of subResults) {
-        folders.push(...arr);
       }
 
       hasMore = result.result.has_more;
       cursor = result.result.cursor;
     }
   } catch (err: unknown) {
-    // Some folders may not be accessible, skip them
     const errorMessage = normalizeError(err);
-    console.error(
-      `[DISCOVER] Error scanning folder "${path}": ${errorMessage}`
-    );
-    // Re-throw if it's the root folder (we need to know about root errors)
-    if (path === "" || path === "/") {
-      throw err;
-    }
+    console.error(`[DISCOVER] Error during recursive list: ${errorMessage}`);
+    throw err;
+  }
+
+  console.log(
+    `[DISCOVER] Scanned ${totalEntries} entries, ${pathCount.size} folders with images`
+  );
+
+  const folders: FolderInfo[] = [];
+  for (const [pathLower, image_count] of pathCount.entries()) {
+    if (image_count <= 0) continue;
+    const segments = pathLower.split("/").filter(Boolean);
+    const name = segments.length > 0 ? segments[segments.length - 1]! : pathLower;
+    const display_path = segments.join(" / ") || "/";
+    folders.push({
+      path: pathLower,
+      name,
+      image_count,
+      display_path,
+    });
   }
 
   return folders;
@@ -270,18 +208,11 @@ export const handler = async (
 
     try {
       console.log(
-        `[DISCOVER] Starting folder discovery from root, max depth: ${maxDepth}`
+        `[DISCOVER] Starting folder discovery from root (recursive list), max depth: ${maxDepth}`
       );
 
-      // Test: Try listing root first
-      console.log("[DISCOVER] Testing root folder access with empty string...");
-      const rootTest = await dbx.filesListFolder({ path: "" });
-      console.log(
-        `[DISCOVER] Root folder test: found ${rootTest.result.entries.length} entries`
-      );
-
-      // If root works, discover from root
-      folders = await discoverFoldersRecursive(rootPath, dbx, maxDepth);
+      // Single recursive list from root – much faster than N+1 per-folder calls
+      folders = await discoverFoldersRecursiveList(rootPath, dbx, maxDepth);
     } catch (rootError: unknown) {
       console.error(
         "[DISCOVER] Root folder access failed, trying alternative paths..."
@@ -294,12 +225,19 @@ export const handler = async (
       for (const testPath of commonPaths) {
         try {
           console.log(`[DISCOVER] Trying path: "${testPath}"`);
-          const testResult = await dbx.filesListFolder({ path: testPath });
+          const testResult = await dbx.filesListFolder({
+            path: testPath,
+            recursive: true,
+          });
           console.log(
             `[DISCOVER] Path "${testPath}" works: found ${testResult.result.entries.length} entries`
           );
           rootPath = testPath;
-          folders = await discoverFoldersRecursive(rootPath, dbx, maxDepth);
+          folders = await discoverFoldersRecursiveList(
+            rootPath,
+            dbx,
+            maxDepth
+          );
           foundPath = true;
           break;
         } catch (pathErr: unknown) {

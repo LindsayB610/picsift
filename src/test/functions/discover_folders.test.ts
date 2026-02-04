@@ -30,6 +30,29 @@ function createMockDbx(
 
   filesListFolder.mockImplementation((opts: { path?: string; recursive?: boolean }) => {
     const path = opts?.path ?? "";
+    const recursive = opts?.recursive === true;
+
+    // New behavior: single recursive list returns flat list of all entries
+    if ((path === "" || path === "/") && recursive) {
+      const flat: Array<{ ".tag": "folder" | "file"; path_lower?: string; path_display?: string; name: string }> = [
+        ...rootEntries,
+      ];
+      for (const [folderPath, files] of Object.entries(folderContents)) {
+        for (const f of files) {
+          flat.push({
+            ".tag": "file",
+            name: f.name,
+            path_lower: `${folderPath}/${f.name}`,
+            path_display: `${folderPath}/${f.name}`,
+          } as { ".tag": "file"; path_lower: string; path_display: string; name: string });
+        }
+      }
+      return Promise.resolve({
+        result: { entries: flat, has_more: false, cursor: undefined },
+      });
+    }
+
+    // Legacy non-recursive (used by fallback path tests)
     if (path === "" || path === "/") {
       return Promise.resolve({
         result: { entries: rootEntries, has_more: false, cursor: undefined },
@@ -107,13 +130,13 @@ describe("discover_folders handler", () => {
     expect(body.folders).toHaveLength(1);
     expect(body.folders[0]).toMatchObject({
       path: "/photos",
-      name: "Photos",
+      name: "photos",
       image_count: 1,
-      display_path: "Photos",
+      display_path: "photos",
     });
     expect(body.total_folders).toBe(1);
     expect(mockDbx.filesListFolder).toHaveBeenCalledWith(
-      expect.objectContaining({ path: "", recursive: false })
+      expect.objectContaining({ path: "", recursive: true })
     );
   });
 
@@ -145,7 +168,7 @@ describe("discover_folders handler", () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body ?? "{}");
     expect(body.folders).toHaveLength(1);
-    expect(body.folders[0].name).toBe("Photos");
+    expect(body.folders[0].name).toBe("photos");
   });
 
   it("counts only image extensions", async () => {
@@ -187,9 +210,9 @@ describe("discover_folders handler", () => {
     const res = await handler(mkEvent());
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body ?? "{}");
-    expect(body.folders[0].name).toBe("Big");
+    expect(body.folders[0].name).toBe("big");
     expect(body.folders[0].image_count).toBe(3);
-    expect(body.folders[1].name).toBe("Small");
+    expect(body.folders[1].name).toBe("small");
     expect(body.folders[1].image_count).toBe(1);
   });
 

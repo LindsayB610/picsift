@@ -14,6 +14,7 @@ PicSift is a personal photo triage web app that helps you quickly decide which p
 - **Fast keyboard shortcuts**: `K` to keep, `D` to delete, `U` to undo
 - **Progress tracking**: See how many photos you've reviewed
 - **Dropbox integration**: Works with your Dropbox folders (e.g. Camera Uploads)
+- **Quick image loading**: Prefetches the next few photos so advancing feels instant
 
 ---
 

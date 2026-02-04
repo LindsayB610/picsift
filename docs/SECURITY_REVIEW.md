@@ -56,7 +56,7 @@ To make sure **no one else can access your Dropbox via PicSift** even though the
    In production, `auth_callback` only stores tokens when `account_id` / `email` match `AUTHORIZED_DROPBOX_ACCOUNT_ID` or `AUTHORIZED_DROPBOX_EMAIL`. Anyone else gets “Access denied” and no token is stored.
 
 2. **Only browsers that completed OAuth can call the API**  
-   After a successful login, the server stores the token in Blob and sets an **HttpOnly session cookie** (`picsift_session`) containing a random secret. The server keeps a list of valid session secrets (one per device). The functions `list`, `temp_link`, `trash`, `undo`, and `discover_folders` **require this cookie** and return 401 if it is missing or invalid. So:
+   After a successful login, the server stores the token in Blob and sets an **HttpOnly session cookie** (`picsift_session`) containing a random secret. The server keeps a list of valid session secrets (one per device). The functions `list`, `temp_link`, `temp_links`, `trash`, `undo`, and `discover_folders` **require this cookie** and return 401 if it is missing or invalid. So:
    - Someone visiting the login page and signing in with their own Dropbox never gets a token stored (fails the authorized-account check).
    - Someone opening a forged URL like `?auth=success&account_id=your_id` might see the app in “logged in” state locally, but **all API calls will return 401** because they don’t have the session cookie (only set when the server completes OAuth for you).
    - Only browsers/devices where you completed the Dropbox OAuth flow have a cookie in the list and can list, view, trash, or undo. **Multiple devices (e.g. phone and desktop) are supported:** each login adds that device's session.

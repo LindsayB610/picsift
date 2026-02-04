@@ -10,6 +10,7 @@ import type {
   DiscoverFoldersResponse,
   ListResponse,
   TempLinkResponse,
+  TempLinksBatchResponse,
   TrashResponse,
   UndoResponse,
   ApiError,
@@ -162,6 +163,22 @@ export async function getTempLink(path: string): Promise<TempLinkResponse> {
     credentials: "include",
   });
   return handleResponse<TempLinkResponse>(response);
+}
+
+/**
+ * Get temporary URLs for multiple images in one request (faster prefetch).
+ */
+export async function getTempLinks(
+  paths: string[]
+): Promise<TempLinksBatchResponse> {
+  if (paths.length === 0) return { links: [] };
+  const response = await fetchWithRetry(`${FUNCTIONS_BASE}/temp_links`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paths }),
+    credentials: "include",
+  });
+  return handleResponse<TempLinksBatchResponse>(response);
 }
 
 /**
