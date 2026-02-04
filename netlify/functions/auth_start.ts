@@ -26,14 +26,25 @@ function generateState(): string {
 }
 
 /**
- * Get OAuth redirect URI
+ * Get OAuth redirect URI (must be HTTPS in production for Dropbox)
  */
 function getRedirectUri(): string {
-  // In production, use custom domain or Netlify URL
-  const netlifyUrl = process.env.NETLIFY_URL;
-  const siteUrl = process.env.URL; // Netlify auto-provides this
-  const baseUrl = netlifyUrl || siteUrl || 'http://localhost:8888';
+  const baseUrl = getBaseUrl();
   return `${baseUrl}/.netlify/functions/auth_callback`;
+}
+
+/**
+ * Get site base URL. Production must use HTTPS or Dropbox shows "doesn't support secure connections".
+ */
+function getBaseUrl(): string {
+  const netlifyUrl = process.env.NETLIFY_URL;
+  const siteUrl = process.env.URL;
+  let base = netlifyUrl || siteUrl || 'http://localhost:8888';
+  // Force HTTPS in production (non-localhost) so Dropbox accepts the redirect URI
+  if (!base.includes('localhost') && base.startsWith('http://')) {
+    base = base.replace(/^http:\/\//i, 'https://');
+  }
+  return base;
 }
 
 export const handler = async (
@@ -71,7 +82,10 @@ export const handler = async (
 
     // Return redirect URL with state
     // Store state in cookie for validation in callback
-    const cookieHeader = `picsift_oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`;
+    // Secure only when on HTTPS (required for production; omit on localhost so cookie is sent)
+    const baseUrl = getBaseUrl();
+    const isSecure = baseUrl.startsWith('https://');
+    const cookieHeader = `picsift_oauth_state=${state}; HttpOnly; SameSite=Lax; Path=/; Max-Age=600${isSecure ? '; Secure' : ''}`;
 
     return {
       statusCode: 200,

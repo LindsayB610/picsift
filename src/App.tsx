@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import Login from './components/Login';
 import FolderSelector from './components/FolderSelector';
-import { checkAuthCallback } from './api';
+import { useAuthCallback } from './hooks/useAuth';
 import type { AuthState, FolderInfo } from './types';
 
 const AUTH_STORAGE_KEY = 'picsift:auth';
@@ -23,9 +23,49 @@ export default function App() {
     null,
   );
 
+  // Check for OAuth callback in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const state = urlParams.get('state');
+  const authCallbackQuery = useAuthCallback(code, state);
+
   useEffect(() => {
     void initializeApp();
   }, []);
+
+  // Handle auth callback from React Query
+  useEffect(() => {
+    if (code && state && authCallbackQuery.data) {
+      const response = authCallbackQuery.data;
+      if (response.success && response.account_id) {
+        const newAuthState: AuthState = {
+          is_authenticated: true,
+          account_id: response.account_id,
+        };
+        setAuthState(newAuthState);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newAuthState));
+        window.history.replaceState({}, '', window.location.pathname);
+
+        const savedFolder = localStorage.getItem(FOLDER_PREFERENCE_KEY);
+        if (savedFolder) {
+          try {
+            const folder = JSON.parse(savedFolder) as FolderInfo;
+            setSelectedFolder(folder);
+            setAppState('ready');
+          } catch {
+            setAppState('folder-selection');
+          }
+        } else {
+          setAppState('folder-selection');
+        }
+      } else {
+        setAppState('login');
+      }
+    } else if (code && state && authCallbackQuery.isError) {
+      console.error('Auth callback error:', authCallbackQuery.error);
+      setAppState('login');
+    }
+  }, [code, state, authCallbackQuery.data, authCallbackQuery.isError, authCallbackQuery.error]);
 
   /**
    * Initialize app: check for OAuth callback, load saved auth state, check for folder preference
@@ -85,41 +125,7 @@ export default function App() {
     }
 
     // Legacy: code + state in URL (frontend calls API) — keep for compatibility
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    if (code && state) {
-      try {
-        const response = await checkAuthCallback();
-        if (response.success && response.account_id) {
-          const newAuthState: AuthState = {
-            is_authenticated: true,
-            account_id: response.account_id,
-          };
-          setAuthState(newAuthState);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newAuthState));
-          window.history.replaceState({}, '', window.location.pathname);
-
-          const savedFolder = localStorage.getItem(FOLDER_PREFERENCE_KEY);
-          if (savedFolder) {
-            try {
-              const folder = JSON.parse(savedFolder) as FolderInfo;
-              setSelectedFolder(folder);
-              setAppState('ready');
-            } catch {
-              setAppState('folder-selection');
-            }
-          } else {
-            setAppState('folder-selection');
-          }
-        } else {
-          setAppState('login');
-        }
-      } catch (error) {
-        console.error('Auth callback error:', error);
-        setAppState('login');
-      }
-      return;
-    }
+    // This is handled by the useAuthCallback hook below
 
     // Not an OAuth callback, check saved auth state
     const savedAuth = localStorage.getItem(AUTH_STORAGE_KEY);

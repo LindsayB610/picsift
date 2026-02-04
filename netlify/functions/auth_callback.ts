@@ -5,6 +5,8 @@
  */
 
 import { Dropbox } from 'dropbox';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 type HandlerEvent = {
   httpMethod: string;
@@ -111,33 +113,42 @@ async function exchangeCodeForTokens(
 }
 
 /**
+ * Get site base URL. Production must use HTTPS.
+ */
+function getBaseUrl(): string {
+  const netlifyUrl = process.env.NETLIFY_URL;
+  const siteUrl = process.env.URL;
+  let base = netlifyUrl || siteUrl || 'http://localhost:8888';
+  if (!base.includes('localhost') && base.startsWith('http://')) {
+    base = base.replace(/^http:\/\//i, 'https://');
+  }
+  return base;
+}
+
+/**
  * Get OAuth redirect URI (must match auth_start)
  */
 function getRedirectUri(): string {
-  const netlifyUrl = process.env.NETLIFY_URL;
-  const siteUrl = process.env.URL;
-  const baseUrl = netlifyUrl || siteUrl || 'http://localhost:8888';
-  return `${baseUrl}/.netlify/functions/auth_callback`;
+  return `${getBaseUrl()}/.netlify/functions/auth_callback`;
 }
 
 /**
  * Get app base URL for redirecting after auth
  * For local dev, always use localhost:8888 (frontend port)
- * In production, use the actual site URL
+ * In production, use the actual site URL (HTTPS)
  */
 function getAppBaseUrl(): string {
-  // In production, use custom domain or Netlify URL
   const netlifyUrl = process.env.NETLIFY_URL;
   const siteUrl = process.env.URL;
-  
   // For local development, always redirect to the frontend port (8888)
-  // process.env.URL in Netlify Dev points to the function server, not the frontend
   if (!netlifyUrl && (!siteUrl || siteUrl.includes('localhost'))) {
     return 'http://localhost:8888';
   }
-  
-  // In production, use the actual site URL
-  return netlifyUrl || siteUrl || 'http://localhost:8888';
+  let base = netlifyUrl || siteUrl || 'http://localhost:8888';
+  if (!base.includes('localhost') && base.startsWith('http://')) {
+    base = base.replace(/^http:\/\//i, 'https://');
+  }
+  return base;
 }
 
 /**
@@ -218,17 +229,45 @@ export const handler = async (
       console.log(`[AUTH] Authenticated: account_id=${account_id}, email=${email}`);
     }
 
-    // Clear state cookie
+    // Clear state cookie (Secure only when on HTTPS)
+    const isSecure = appBase.startsWith('https://');
     const clearCookieHeader =
-      'picsift_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+      `picsift_oauth_state=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${isSecure ? '; Secure' : ''}`;
 
-    // In local dev, log the refresh token so user can update .env
+    // In local dev, automatically update .env file with new tokens
     if (isLocalDev) {
-      console.log('='.repeat(80));
-      console.log('[AUTH] NEW REFRESH TOKEN (update your .env file):');
-      console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
-      console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
-      console.log('='.repeat(80));
+      try {
+        const envPath = join(process.cwd(), '.env');
+        let envContent = readFileSync(envPath, 'utf-8');
+        
+        // Update DROPBOX_REFRESH_TOKEN
+        envContent = envContent.replace(
+          /^DROPBOX_REFRESH_TOKEN=.*$/m,
+          `DROPBOX_REFRESH_TOKEN=${refresh_token}`,
+        );
+        
+        // Update AUTHORIZED_DROPBOX_ACCOUNT_ID
+        envContent = envContent.replace(
+          /^AUTHORIZED_DROPBOX_ACCOUNT_ID=.*$/m,
+          `AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`,
+        );
+        
+        writeFileSync(envPath, envContent, 'utf-8');
+        console.log('='.repeat(80));
+        console.log('[AUTH] ✅ Automatically updated .env file with new tokens!');
+        console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
+        console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
+        console.log('='.repeat(80));
+        console.log('[AUTH] ⚠️  Restart the server to load the new tokens.');
+      } catch (envError) {
+        // If auto-update fails, just log the values
+        console.log('='.repeat(80));
+        console.log('[AUTH] ⚠️  Could not auto-update .env file. Please update manually:');
+        console.log(`DROPBOX_REFRESH_TOKEN=${refresh_token}`);
+        console.log(`AUTHORIZED_DROPBOX_ACCOUNT_ID=${account_id}`);
+        console.log('='.repeat(80));
+        console.error('[AUTH] Error updating .env:', envError);
+      }
     }
 
     // Redirect to app with success so user lands on the app, not raw JSON

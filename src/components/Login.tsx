@@ -3,9 +3,8 @@
  * Displays README content and "Login with Dropbox" button
  */
 
-import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { startAuth } from '../api';
+import { useStartAuth } from '../hooks/useAuth';
 
 const README_CONTENT = `# PicSift
 
@@ -66,28 +65,20 @@ PicSift is a personal photo triage web app that helps you quickly decide which p
 **Guiding principle**: Make it feel good to decide. Make it hard to make an irreversible mistake.`;
 
 export default function Login() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const startAuthMutation = useStartAuth();
 
-  const handleLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await startAuth();
-      // Redirect to Dropbox OAuth
-      if (response.redirect_url) {
-        window.location.href = response.redirect_url;
-      } else {
-        setError('Failed to get OAuth URL');
-        setIsLoading(false);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to start authentication',
-      );
-      setIsLoading(false);
-    }
+  const handleLogin = () => {
+    void startAuthMutation.mutate(undefined, {
+      onSuccess: (response) => {
+        // Redirect to Dropbox OAuth
+        if (response.redirect_url) {
+          window.location.href = response.redirect_url;
+        }
+      },
+      onError: () => {
+        // Error is handled by the error state below
+      },
+    });
   };
 
   return (
@@ -114,10 +105,8 @@ export default function Login() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <button
-          onClick={() => {
-            void handleLogin();
-          }}
-          disabled={isLoading}
+          onClick={handleLogin}
+          disabled={startAuthMutation.isPending}
           style={{
             padding: '1rem 2rem',
             fontSize: '1.1rem',
@@ -126,15 +115,15 @@ export default function Login() {
             color: 'white',
             border: 'none',
             borderRadius: '6px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.6 : 1,
+            cursor: startAuthMutation.isPending ? 'not-allowed' : 'pointer',
+            opacity: startAuthMutation.isPending ? 0.6 : 1,
             transition: 'opacity 0.2s',
           }}
         >
-          {isLoading ? 'Connecting...' : 'Login with Dropbox'}
+          {startAuthMutation.isPending ? 'Connecting...' : 'Login with Dropbox'}
         </button>
 
-        {error && (
+        {startAuthMutation.isError && (
           <div
             style={{
               padding: '1rem',
@@ -144,7 +133,9 @@ export default function Login() {
               border: '1px solid var(--error-border, #fcc)',
             }}
           >
-            {error}
+            {startAuthMutation.error instanceof Error
+              ? startAuthMutation.error.message
+              : 'Failed to start authentication'}
           </div>
         )}
       </div>

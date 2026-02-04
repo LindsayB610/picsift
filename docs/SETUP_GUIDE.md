@@ -4,6 +4,12 @@
 
 This guide will walk you through setting up your Dropbox app, configuring Netlify, and testing your authentication flow. Don't worry if you're not a developer—this guide explains everything in plain language.
 
+---
+
+## 🟢 DNS & HTTPS Ready
+
+DNS for `picsift.lindsaybrunner.com` has resolved and the SSL certificate is issued. You can proceed with **production verification** (Step 5) and **production testing** (Step 6), then continue to Phase 3 (Dropbox API) and Phase 5 (photo triage UI).
+
 ### Important: Step Order
 
 The steps are numbered, but here's the recommended order:
@@ -240,17 +246,22 @@ Think of environment variables as secret settings that your app needs to work, b
    - Click **"Add variable"** or **"New variable"**
    - Add each variable one at a time:
    
-   **Variable 1:**
+   **Variable 1 (recommended for custom domain):**
+   - **Key**: `NETLIFY_URL`
+   - **Value**: `https://picsift.lindsaybrunner.com` (or your Netlify URL)
+   - This ensures OAuth redirects use HTTPS and your custom domain so Dropbox doesn't show "doesn't support secure connections". Click **"Save"**
+   
+   **Variable 2:**
    - **Key**: `DROPBOX_APP_KEY`
    - **Value**: (paste your App Key from Step 1)
    - Click **"Save"**
    
-   **Variable 2:**
+   **Variable 3:**
    - **Key**: `DROPBOX_APP_SECRET`
    - **Value**: (paste your App Secret from Step 1)
    - Click **"Save"**
    
-   **Variable 3:**
+   **Variable 4:**
    - **Key**: `AUTHORIZED_DROPBOX_ACCOUNT_ID`
    - **Value**: (leave empty for now - we'll fill this after first login)
    - Click **"Save"**
@@ -431,16 +442,76 @@ This step helps you verify that everything is working correctly on your live sit
 
 ---
 
+## Fix the custom domain certificate (picsift.lindsaybrunner.com)
+
+If **Verify DNS configuration** succeeds but **Provision certificate** keeps failing, or you see **ERR_CERT_COMMON_NAME_INVALID** in the browser, work through these steps. (Your DNS and traffic are already correct: the domain points to Netlify and responses show `Server: Netlify`.)
+
+### 1. Try "Renew certificate" in Netlify
+- **Domain management** → **HTTPS**.
+- If you see **Renew certificate** (or **Renew**), click it and wait a few minutes. Sometimes a renewed request succeeds when the first one didn’t.
+
+### 2. Run Let’s Encrypt’s diagnostic
+- Go to **[Let’s Debug](https://letsdebug.net/)**.
+- Enter **picsift.lindsaybrunner.com** and run the check.
+- Fix any issues it reports, for example:
+  - **AAAA (IPv6) records** on the subdomain that point to old hosts → remove them in Squarespace if they’re not needed.
+  - **DNSSEC** problems → if you use DNSSEC for lindsaybrunner.com, Netlify’s docs say they don’t support DNSSEC; you’d need to use external DNS only (which you do) and ensure DNSSEC doesn’t block Let’s Encrypt.
+
+### 3. Clear DNS caches and retry
+- Netlify’s docs say old DNS caches can block provisioning. Your CNAME TTL is 4 hours.
+- Use **[Google Public DNS cache flush](https://developers.google.com/speed/public-dns/cache)** for `picsift.lindsaybrunner.com` (if the tool allows).
+- Wait 10–15 minutes, then in Netlify click **Verify DNS configuration** again, then **Provision certificate**.
+
+### 4. No proxy in front of the subdomain
+- If Squarespace (or anything else) is **proxying** traffic for `picsift` (so visitors hit their servers first instead of Netlify), Let’s Encrypt validation can fail. In Squarespace DNS, the `picsift` CNAME should be **DNS-only** (no proxy / no “accelerate and protect” style option). If you see a proxy toggle, turn it off for this record.
+
+### 5. Ask Netlify to fix the certificate
+- Open a thread in the **[Netlify Support Forums](https://answers.netlify.com/)** or use **[Netlify Support](https://www.netlify.com/support)**.
+- Include:
+  - **Site name:** picsift (or the exact Netlify site name).
+  - **Domain:** picsift.lindsaybrunner.com.
+  - **DNS:** External DNS at Squarespace; CNAME `picsift` → `picsift.netlify.app`; DNS resolves; HTTP response shows `Server: Netlify`.
+  - **What you did:** Verify DNS configuration succeeds; Provision certificate runs but the browser shows ERR_CERT_COMMON_NAME_INVALID (certificate doesn’t match the domain).
+- Support can see provisioning logs and can often fix or re-trigger certificate issuance.
+
+### Workaround while the cert is broken
+- Use **https://picsift.netlify.app** for the app and Dropbox (see troubleshooting entry below for exact steps).
+
+---
+
 ## Troubleshooting
 
 ### Problem: "DROPBOX_APP_KEY not configured"
 **Solution**: Make sure you've set the environment variables in Netlify (or in your `.env` file for local testing).
+
+### Problem: "Doesn't support secure connections" or "then nothing" after Login
+**Solution**: 
+- Dropbox requires **HTTPS** for the redirect URI in production. Set **`NETLIFY_URL`** in Netlify to `https://picsift.lindsaybrunner.com` (Site configuration → Environment variables). Then trigger a new deploy so the functions use it.
+- Ensure the redirect URI in your Dropbox app is exactly: `https://picsift.lindsaybrunner.com/.netlify/functions/auth_callback` (no trailing slash, https).
+- After changing env vars, always **Trigger deploy** in Netlify so the new values are used.
+
+### Problem: Custom domain Let's Encrypt certificate keeps failing (ERR_CERT_COMMON_NAME_INVALID)
+**Solution**: Use the **Netlify URL** instead until the custom domain cert works (or contact Netlify support):
+
+1. **Dropbox App Console** → OAuth 2 → Redirect URIs: add  
+   `https://picsift.netlify.app/.netlify/functions/auth_callback`  
+   (Keep your existing URIs; just add this one.)
+
+2. **Netlify** → Your PicSift site → **Site configuration** → **Environment variables**:  
+   Set **`NETLIFY_URL`** = `https://picsift.netlify.app`  
+   (Add or overwrite; this makes OAuth redirects use the Netlify URL.)
+
+3. **Deploys** → **Trigger deploy** → **Deploy site**. Wait for it to finish.
+
+4. Use the app at **https://picsift.netlify.app** (login, folder selection, etc.).  
+   You can switch back to the custom domain later when the cert is fixed.
 
 ### Problem: "Invalid redirect URI"
 **Solution**: 
 - Check that the redirect URI in your Dropbox app settings exactly matches:
   - For local: `http://localhost:8888/.netlify/functions/auth_callback`
   - For production: `https://picsift.lindsaybrunner.com/.netlify/functions/auth_callback`
+  - If using Netlify URL: `https://picsift.netlify.app/.netlify/functions/auth_callback`
 - Make sure there are no extra spaces or typos
 
 ### Problem: "Access denied" after logging in
@@ -483,13 +554,14 @@ Once you've completed these steps and everything is working:
 
 Make sure you have all of these set (either in `.env` for local or in Netlify):
 
+- [ ] `NETLIFY_URL` - **Recommended:** `https://picsift.lindsaybrunner.com` (ensures HTTPS redirect for Dropbox)
 - [ ] `DROPBOX_APP_KEY` - From Dropbox App Console
 - [ ] `DROPBOX_APP_SECRET` - From Dropbox App Console  
 - [ ] `DROPBOX_REFRESH_TOKEN` - Obtained after first OAuth login
 - [ ] `AUTHORIZED_DROPBOX_ACCOUNT_ID` - Your Dropbox account ID (format: `dbid:xxxxxxxxxxxxx`)
 
 **Optional:**
-- [ ] `NETLIFY_URL` - Your Netlify site URL (usually auto-detected)
+- `URL` - Auto-set by Netlify (backup if NETLIFY_URL not set)
 - [ ] `DROPBOX_SOURCE_PATH` - Default folder path (optional, defaults to "/Camera Uploads")
 
 ---

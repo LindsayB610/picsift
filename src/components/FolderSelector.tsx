@@ -3,8 +3,8 @@
  * Displays discovered folders and allows user to select one
  */
 
-import { useState, useEffect } from 'react';
-import { discoverFolders } from '../api';
+import { useState, useEffect, useMemo } from 'react';
+import { useDiscoverFolders } from '../hooks/useFolders';
 import type { FolderInfo } from '../types';
 
 const FOLDER_PREFERENCE_KEY = 'picsift:selectedFolder';
@@ -18,34 +18,32 @@ export default function FolderSelector({
   onFolderSelected,
   onCancel,
 }: FolderSelectorProps) {
-  const [folders, setFolders] = useState<FolderInfo[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Use React Query to fetch folders
+  const {
+    data: foldersData,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useDiscoverFolders(3);
 
+  const folders = useMemo(() => foldersData?.folders ?? [], [foldersData?.folders]);
+  const error = queryError
+    ? queryError instanceof Error
+      ? queryError.message
+      : 'Failed to discover folders'
+    : null;
+
+  // Check for saved preference when folders load
   useEffect(() => {
-    void loadFolders();
-  }, []);
-
-  const loadFolders = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log('[FolderSelector] Starting folder discovery...');
-      const response = await discoverFolders(3);
-      console.log('[FolderSelector] Received response:', response);
-      setFolders(response.folders);
-
-      // Check for saved preference
+    if (folders.length > 0) {
       const saved = localStorage.getItem(FOLDER_PREFERENCE_KEY);
       if (saved) {
         try {
           const savedFolder = JSON.parse(saved) as FolderInfo;
           // Verify saved folder still exists in discovered folders
-          const found = response.folders.find(
-            (f) => f.path === savedFolder.path,
-          );
+          const found = folders.find((f) => f.path === savedFolder.path);
           if (found) {
             setSelectedFolder(found);
           }
@@ -53,14 +51,8 @@ export default function FolderSelector({
           // Invalid saved preference, ignore
         }
       }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to discover folders',
-      );
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [folders]);
 
   const handleSelect = (folder: FolderInfo) => {
     setSelectedFolder(folder);
@@ -114,7 +106,7 @@ export default function FolderSelector({
         </div>
         <button
           onClick={() => {
-            void loadFolders();
+            void refetch();
           }}
           style={{
             padding: '0.75rem 1.5rem',

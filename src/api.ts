@@ -16,8 +16,9 @@ const FUNCTIONS_BASE = '/.netlify/functions';
  */
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = (await response.json().catch(() => ({}))) as ApiError;
-    throw new Error(error.message || `API error: ${response.status}`);
+    const error = (await response.json().catch(() => ({}))) as ApiError & { error?: string };
+    const message = error.message || error.error || `API error: ${response.status}`;
+    throw new Error(message);
   }
   return (await response.json()) as T;
 }
