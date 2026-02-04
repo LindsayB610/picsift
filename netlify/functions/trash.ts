@@ -1,6 +1,6 @@
 /**
  * Move a file to quarantine (soft delete)
- * Destination: /_TRASHME/<session_id><original_path>
+ * Destination: /_TRASHME/<filename> (single folder; autorename if name exists)
  * Uses files/move_v2 with autorename: true.
  */
 
@@ -84,21 +84,23 @@ export const handler = async (
     };
   }
 
-  // Quarantine path: /_TRASHME/<sessionId><original_path>
-  // e.g. /_TRASHME/abc123/Camera Uploads/photo.jpg
-  const trashedPath = `/_TRASHME/${sessionId}${path}`;
+  // Quarantine path: /_TRASHME/<filename> (flat; no session or source-path folders)
+  const basename = path.split("/").filter(Boolean).pop() ?? path;
+  const toPath = `/_TRASHME/${basename}`;
 
   try {
     const dbx = await createDropboxClient();
-    await dbx.filesMoveV2({
+    const moveResult = await dbx.filesMoveV2({
       from_path: path,
-      to_path: trashedPath,
+      to_path: toPath,
       autorename: true,
     });
+    const actualTrashedPath =
+      moveResult.result.metadata.path_display ?? moveResult.result.metadata.path_lower ?? toPath;
 
     const trashRecord: TrashRecord = {
       original_path: path,
-      trashed_path: trashedPath,
+      trashed_path: actualTrashedPath,
       session_id: sessionId,
       timestamp: new Date().toISOString(),
     };
