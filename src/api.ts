@@ -123,7 +123,7 @@ export async function checkAuthCallback(): Promise<AuthCallbackResponse> {
  * Discover folders with images
  */
 export async function discoverFolders(
-  maxDepth: number = 3
+  maxDepth: number = 1
 ): Promise<DiscoverFoldersResponse> {
   const response = await fetchWithRetry(
     `${FUNCTIONS_BASE}/discover_folders?max_depth=${maxDepth}`,

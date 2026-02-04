@@ -32,7 +32,7 @@ export default function FolderSelector({
     isLoading,
     error: queryError,
     refetch,
-  } = useDiscoverFolders(3);
+  } = useDiscoverFolders(1);
 
   const folders = useMemo(
     () => foldersData?.folders ?? [],

@@ -204,7 +204,7 @@ describe("API client with mocked fetch", () => {
   });
 
   describe("discoverFolders", () => {
-    it("calls discover_folders with default max_depth", async () => {
+    it("calls discover_folders with default max_depth 1", async () => {
       const mockFetch = vi.mocked(fetch);
       mockFetch.mockResolvedValue(
         new Response(
@@ -215,7 +215,7 @@ describe("API client with mocked fetch", () => {
       const result = await discoverFolders();
       expect(result.folders).toHaveLength(1);
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("max_depth=3"),
+        expect.stringContaining("max_depth=1"),
         expect.objectContaining({ credentials: "include" })
       );
     });

@@ -17,7 +17,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: [path.resolve(__dirname, "src/test/setup.ts")],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "netlify/functions/**/*.{test,spec}.{ts,tsx}"],
     globals: true,
     css: true,
     coverage: {

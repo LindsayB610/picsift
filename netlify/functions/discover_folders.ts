@@ -23,6 +23,14 @@ type HandlerResponse = {
 
 /** In-memory cache for folder discovery (1 hour TTL, per warm instance) */
 const FOLDER_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+/** Reset cache (for unit tests only) */
+export function __clearFolderCacheForTesting(): void {
+  folderCache = null;
+}
+
+/** Max concurrent Dropbox API calls (avoids rate limits, speeds up discovery) */
+const DISCOVER_CONCURRENCY = 6;
 let folderCache: {
   maxDepth: number;
   result: { folders: FolderInfo[]; total_folders: number };
@@ -83,6 +91,22 @@ async function countImagesInFolder(
 }
 
 /**
+ * Process items in parallel with concurrency limit
+ */
+async function processBatches<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += DISCOVER_CONCURRENCY) {
+    const batch = items.slice(i, i + DISCOVER_CONCURRENCY);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+/**
  * Recursively discover folders with images
  */
 async function discoverFoldersRecursive(
@@ -135,53 +159,53 @@ async function discoverFoldersRecursive(
         console.log(`[DISCOVER] Root level: found ${entries.length} entries`);
       }
 
-      for (const entry of entries) {
-        if (entry[".tag"] === "folder") {
-          // Ensure required fields are present
-          const pathLower = entry.path_lower;
-          const pathDisplay = entry.path_display;
-          const name = entry.name;
+      const folderEntries = entries.filter(
+        (e): e is typeof e & { path_lower: string; path_display?: string; name: string } =>
+          e[".tag"] === "folder" && !!e.path_lower && !!e.name
+      );
 
-          if (!pathLower || !name) {
-            console.warn(
-              `Skipping folder with missing required fields:`,
-              entry
-            );
-            continue;
-          }
-
-          // Count images in this folder
-          const imageCount = await countImagesInFolder(pathLower, dbx);
-
-          if (currentDepth <= 1) {
-            console.log(
-              `[DISCOVER] Folder "${name}" (${pathLower}): ${imageCount} images`
-            );
-          }
-
-          if (imageCount > 0) {
-            // Create breadcrumb-style display path
-            const displayPath = pathDisplay
-              ? pathDisplay.split("/").filter(Boolean).join(" / ")
-              : "/";
-
-            folders.push({
-              path: pathLower,
-              name,
-              image_count: imageCount,
-              display_path: displayPath,
-            });
-
-            // Recursively search subfolders
-            const subfolders = await discoverFoldersRecursive(
-              pathLower,
-              dbx,
-              maxDepth,
-              currentDepth + 1
-            );
-            folders.push(...subfolders);
-          }
+      for (const e of entries) {
+        if (e[".tag"] === "folder" && (!e.path_lower || !e.name)) {
+          console.warn(`Skipping folder with missing required fields:`, e);
         }
+      }
+
+      // Process sibling folders in parallel (count + recurse)
+      const subResults = await processBatches(folderEntries, async (entry) => {
+        const { path_lower: pathLower, path_display: pathDisplay, name } = entry;
+        const imageCount = await countImagesInFolder(pathLower, dbx);
+
+        if (currentDepth <= 1) {
+          console.log(
+            `[DISCOVER] Folder "${name}" (${pathLower}): ${imageCount} images`
+          );
+        }
+
+        const displayPath = pathDisplay
+          ? pathDisplay.split("/").filter(Boolean).join(" / ")
+          : "/";
+
+        let found: FolderInfo[] = [];
+        if (imageCount > 0) {
+          found.push({
+            path: pathLower,
+            name,
+            image_count: imageCount,
+            display_path: displayPath,
+          });
+          const subfolders = await discoverFoldersRecursive(
+            pathLower,
+            dbx,
+            maxDepth,
+            currentDepth + 1
+          );
+          found.push(...subfolders);
+        }
+        return found;
+      });
+
+      for (const arr of subResults) {
+        folders.push(...arr);
       }
 
       hasMore = result.result.has_more;
@@ -218,7 +242,7 @@ export const handler = async (
 
   try {
     const maxDepth = parseInt(
-      event.queryStringParameters?.max_depth || "3",
+      event.queryStringParameters?.max_depth || "1",
       10
     );
 

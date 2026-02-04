@@ -40,12 +40,12 @@ describe("useDiscoverFolders", () => {
     vi.mocked(api.discoverFolders).mockReset();
   });
 
-  it("calls discoverFolders with default maxDepth 3", async () => {
+  it("calls discoverFolders with default maxDepth 1", async () => {
     vi.mocked(api.discoverFolders).mockResolvedValue({ folders: mockFolders });
     const { wrapper } = createWrapper();
     renderHook(() => useDiscoverFolders(), { wrapper });
     await waitFor(() => {
-      expect(api.discoverFolders).toHaveBeenCalledWith(3);
+      expect(api.discoverFolders).toHaveBeenCalledWith(1);
     });
   });
 

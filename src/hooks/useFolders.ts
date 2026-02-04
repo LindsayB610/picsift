@@ -9,7 +9,7 @@ import type { DiscoverFoldersResponse } from "../types";
 /**
  * Hook to discover folders with images
  */
-export function useDiscoverFolders(maxDepth: number = 3) {
+export function useDiscoverFolders(maxDepth: number = 1) {
   return useQuery({
     queryKey: ["folders", "discover", maxDepth],
     queryFn: async (): Promise<DiscoverFoldersResponse> => {
